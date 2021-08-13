@@ -1,7 +1,5 @@
-name: Java CI
-
-on: [push]
-
+name: Build and publish
+on: push
 jobs:
   build:
     runs-on: ubuntu-latest
