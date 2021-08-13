@@ -13,6 +13,8 @@ public class ScrappingService {
     private final String message;
     private final String firstMessage;
     private final ScrappingClient scrappingClient;
+    private final String kiUser;
+    private final String kiPassword;
 
     private boolean notificationIsAlreadySent = false;
 
@@ -22,19 +24,23 @@ public class ScrappingService {
             @Value("${discord.hook.username}") String username,
             @Value("${discord.hook.message}") String message,
             @Value("${discord.hook.firstMessage}") String firstMessage,
-            ScrappingClient scrappingClient) {
+            ScrappingClient scrappingClient,
+            @Value("${kraland.user}")  String kiUser,
+            @Value("${kraland.password}")String kiPassword) {
         this.hookUrl = hookUrl;
         this.avatar = avatar;
         this.username = username;
         this.message = message;
         this.firstMessage = firstMessage;
         this.scrappingClient = scrappingClient;
+        this.kiUser = kiUser;
+        this.kiPassword = kiPassword;
 
         initializeService();
     }
 
     public void loadKiAndSendNotificationIfWeHaveReport() {
-        if (scrappingClient.hasNotification()) {
+        if (scrappingClient.hasNotification(kiUser, kiPassword)) {
             sendNotificationIfNotificationFlagIsTrue();
         } else {
             setNotificationFlag(false);

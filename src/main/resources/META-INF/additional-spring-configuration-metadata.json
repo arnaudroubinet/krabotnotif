@@ -24,6 +24,16 @@
       "name": "discord.hook.firstMessage",
       "type": "java.lang.String",
       "description": "Message sent when the scrapping service is initialized."
+    },
+    {
+      "name": "kraland.user",
+      "type": "java.lang.String",
+      "description": "Your kraland user."
+    },
+    {
+      "name": "kraland.password",
+      "type": "java.lang.String",
+      "description": "Your kraland password."
     }
   ]
 }

@@ -16,7 +16,7 @@ public class ScrappingClient {
 
     private final HttpClient httpClient;
     private final HttpRequest loadKi;
-    private final HttpRequest authKi;
+    private final HttpRequest.Builder authKi;
 
     public ScrappingClient() {
         try {
@@ -32,7 +32,6 @@ public class ScrappingClient {
 
             loadKi = HttpRequest.newBuilder(new URI("http://www.kraland.org/main.php?p=1")).GET().build();
             authKi = HttpRequest.newBuilder(new URI("http://www.kraland.org/main.php?p=1&a=100"))
-                    .POST(HttpRequest.BodyPublishers.ofString("p1=thesith&p2=Thesith!&Submit=Ok!"))
                     .headers("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:91.0) Gecko/20100101 Firefox/91.0",
                             "Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
                             "Accept-Language", "fr,fr-FR;q=0.8,en-US;q=0.5,en;q=0.3",
@@ -41,22 +40,23 @@ public class ScrappingClient {
                             "Origin", "http://www.kraland.org",
                             "DNT", "1",
                             "Referer", "http://www.kraland.org/main.php",
-                            "Upgrade-Insecure-Requests", "1").build();
+                            "Upgrade-Insecure-Requests", "1");
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         }
     }
 
 
-    public boolean hasNotification() {
+    public boolean hasNotification(String kiUser, String kiPassword) {
         try {
             HttpResponse<String> response = httpClient.send(loadKi, HttpResponse.BodyHandlers.ofString());
             if (response.body().contains("IDENTIFIER")) {
-                httpClient.send(authKi, HttpResponse.BodyHandlers.ofString());
+                String realPassword = kiPassword.length() > 5 ? kiPassword.substring(0, 8) : kiPassword;
+                String body = "p1=" + kiUser + "&p2=" + realPassword + "&Submit=Ok!";
+                httpClient.send(authKi.POST(HttpRequest.BodyPublishers.ofString(body)).build(), HttpResponse.BodyHandlers.ofString());
                 response = httpClient.send(loadKi, HttpResponse.BodyHandlers.ofString());
             }
-
-            return (!response.body().contains("report.gif")) && response.body().contains("Rowanne");
+            return response.body().contains("Messages non lus dans votre rapport.");
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
