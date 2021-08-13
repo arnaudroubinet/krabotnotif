@@ -39,5 +39,3 @@ jobs:
         with:
           push: true
           tags: arnaudroubinet/krabotnotif:latest
-          secrets: |
-            GIT_AUTH_TOKEN=${{ secrets.MYTOKEN }}
