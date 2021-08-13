@@ -1,4 +1,4 @@
-package arn.roub.hook;
+package arn.roub.hook.utils;
 
 import javax.net.ssl.HttpsURLConnection;
 import java.awt.Color;

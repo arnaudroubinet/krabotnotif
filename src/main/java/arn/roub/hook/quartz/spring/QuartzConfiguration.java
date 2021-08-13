@@ -1,5 +1,6 @@
-package arn.roub.hook.quartz;
+package arn.roub.hook.quartz.spring;
 
+import arn.roub.hook.quartz.job.ScrapAndNotifyJob;
 import org.quartz.JobDetail;
 import org.quartz.Trigger;
 import org.quartz.TriggerBuilder;
@@ -15,7 +16,7 @@ public class QuartzConfiguration {
     @Bean
     public JobDetailFactoryBean scrap() {
         JobDetailFactoryBean jobDetailFactory = new JobDetailFactoryBean();
-        jobDetailFactory.setJobClass(ScrapJob.class);
+        jobDetailFactory.setJobClass(ScrapAndNotifyJob.class);
         jobDetailFactory.setDescription("Invoke Sample Job service...");
         jobDetailFactory.setDurability(true);
         return jobDetailFactory;

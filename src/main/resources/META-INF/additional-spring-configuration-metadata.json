@@ -1,0 +1,29 @@
+{
+  "properties": [
+    {
+      "name": "discord.hook.url",
+      "type": "java.lang.String",
+      "description": "Your discord hook url."
+    },
+    {
+      "name": "discord.hook.avatar.url",
+      "type": "java.lang.String",
+      "description": "The URL of the picture you want to use has avatar for the notification."
+    },
+    {
+      "name": "discord.hook.username",
+      "type": "java.lang.String",
+      "description": "The username you want to use for the notification."
+    },
+    {
+      "name": "discord.hook.message",
+      "type": "java.lang.String",
+      "description": "Message sent when you have a notification."
+    },
+    {
+      "name": "discord.hook.firstMessage",
+      "type": "java.lang.String",
+      "description": "Message sent when the scrapping service is initialized."
+    }
+  ]
+}
