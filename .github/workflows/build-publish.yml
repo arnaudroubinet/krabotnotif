@@ -5,7 +5,6 @@ name: Build app and publish to docker
 
 on:
   push:
-    types: [ created ]
 
 jobs:
   build:
