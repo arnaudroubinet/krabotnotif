@@ -3,7 +3,6 @@ on: push
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v2
       - name: Set up JDK 15
@@ -13,12 +12,14 @@ jobs:
           distribution: 'adopt'
       - name: Validate Gradle wrapper
         uses: gradle/wrapper-validation-action@v1.0.4
+
       - uses: gradle/gradle-build-action@v1.3.3
         with:
+          gradle-version: current
           arguments: bootJar
   push_to_registry:
     needs: build
-    name: Push Docker image to Docker Hub
+    name: Push Docker image
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repo
