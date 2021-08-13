@@ -1,0 +1,55 @@
+plugins {
+    id 'java'
+    id 'io.quarkus'
+}
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+}
+
+
+dependencies {
+    implementation 'io.quarkus:quarkus-rest-jackson'
+    implementation enforcedPlatform(libs.quarkus)
+
+    implementation 'io.quarkus:quarkus-container-image-docker'
+    implementation 'io.quarkus:quarkus-arc'
+    implementation 'io.quarkus:quarkus-scheduler'
+    implementation 'io.quarkus:quarkus-rest'
+    implementation (libs.jsoup)
+    testImplementation 'io.quarkus:quarkus-junit5'
+    testImplementation 'io.rest-assured:rest-assured'
+
+    compileOnly (libs.lombok)
+    annotationProcessor (libs.lombok)
+    testCompileOnly (libs.lombok)
+    testAnnotationProcessor (libs.lombok)
+}
+
+group 'arn.roub.krabot'
+version '2.2.2'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+test {
+    systemProperty "java.util.logging.manager", "org.jboss.logmanager.LogManager"
+}
+compileJava {
+    options.encoding = 'UTF-8'
+    options.compilerArgs << '-parameters'
+}
+
+compileTestJava {
+    options.encoding = 'UTF-8'
+}
+
+quarkusBuild {
+    nativeArgs {
+        containerBuild = true
+        builderImage = "quay.io/quarkus/ubi-quarkus-mandrel-builder-image:jdk-21"
+    }
+}

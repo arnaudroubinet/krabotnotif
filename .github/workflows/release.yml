@@ -1,0 +1,38 @@
+name: Build
+on:
+  - release
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu' # See 'Supported distributions' for available options
+          java-version: '21'
+      - name : chown
+        run: chmod +x gradlew
+      - name: Execute Gradle build
+        run: ./gradlew build -Dquarkus.native.enabled=true -Dquarkus.native.container-build=true -Dquarkus.package.jar.enabled=false -Dquarkus.native.builder-image=graalvm -Dquarkus.container-image.push=true
+        env:
+          QUARKUS_CONTAINER_IMAGE_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          QUARKUS_CONTAINER_IMAGE_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}  
+          QUARKUS_CONTAINER_IMAGE_GROUP: arnaudroubinet
+          QUARKUS_CONTAINER_IMAGE_NAME: krabotnotif
+          QUARKUS_CONTAINER_IMAGE_TAG: latest
+          QUARKUS_CONTAINER_IMAGE_ADDITIONAL_TAGS: ${{ github.event.release.tag_name }}
+          QUARKUS_NATIVE_ENABLE_HTTPS_URL_HANDLER: true
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: 'arnaudroubinet/krabotnotif:${{ github.event.release.tag_name }}'
+          format: 'template'
+          template: '@/contrib/sarif.tpl'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
