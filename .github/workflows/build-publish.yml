@@ -9,7 +9,6 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -27,9 +26,16 @@ jobs:
 
       - name: Build with Gradle
         run: gradle build
-
+      -
+        name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          
       - name: Build and push Docker images
-        uses: docker/build-push-action@v2.6.1
+        id: docker_build
+        uses: docker/build-push-action@v2
         with:
           push: true
           tags: arnaudroubinet/krabotnotif:latest
