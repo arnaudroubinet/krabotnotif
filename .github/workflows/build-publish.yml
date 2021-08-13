@@ -6,7 +6,7 @@ on: push
 
 jobs:
   gradle:
-    runs-on: [ ubuntu-latest, macos-latest, windows-latest ]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
         name: Checkout app
