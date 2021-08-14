@@ -4,33 +4,39 @@ import arn.roub.hook.utils.DiscordWebhook;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 @Service
 public class ScrappingService {
 
     private final String hookUrl;
     private final String avatar;
     private final String username;
-    private final String message;
+    private final String notificationMessage;
+    private final String kramailMessage;
     private final String firstMessage;
     private final ScrappingClient scrappingClient;
     private final String kiUser;
     private final String kiPassword;
 
-    private boolean notificationIsAlreadySent = false;
+    private final AtomicBoolean reportNotificationIsAlreadySentFlag = new AtomicBoolean(false);
+    private final AtomicBoolean kramailNotificationIsAlreadySentFlag = new AtomicBoolean(false);
 
     public ScrappingService(
             @Value("${discord.hook.url}") String hookUrl,
             @Value("${discord.hook.avatar.url}") String avatar,
             @Value("${discord.hook.username}") String username,
-            @Value("${discord.hook.message}") String message,
+            @Value("${discord.hook.message.notification}") String notificationMessage,
+            @Value("${discord.hook.message.kramail}") String kramailMessage,
             @Value("${discord.hook.firstMessage}") String firstMessage,
             ScrappingClient scrappingClient,
-            @Value("${kraland.user}")  String kiUser,
-            @Value("${kraland.password}")String kiPassword) {
+            @Value("${kraland.user}") String kiUser,
+            @Value("${kraland.password}") String kiPassword) {
         this.hookUrl = hookUrl;
         this.avatar = avatar;
         this.username = username;
-        this.message = message;
+        this.notificationMessage = notificationMessage;
+        this.kramailMessage = kramailMessage;
         this.firstMessage = firstMessage;
         this.scrappingClient = scrappingClient;
         this.kiUser = kiUser;
@@ -40,21 +46,26 @@ public class ScrappingService {
     }
 
     public void loadKiAndSendNotificationIfWeHaveReport() {
-        if (scrappingClient.hasNotification(kiUser, kiPassword)) {
-            sendNotificationIfNotificationFlagIsTrue();
+        ScrappingResponse response = scrappingClient.hasNotification(kiUser, kiPassword);
+
+        if (response.hasNotification()) {
+            sendNotificationIfNotificationFlagIsTrue(notificationMessage, reportNotificationIsAlreadySentFlag);
         } else {
-            setNotificationFlag(false);
+            reportNotificationIsAlreadySentFlag.set(false);
+        }
+
+        if (response.hasKramail()) {
+            sendNotificationIfNotificationFlagIsTrue(kramailMessage, kramailNotificationIsAlreadySentFlag);
+        } else {
+            kramailNotificationIsAlreadySentFlag.set(false);
         }
     }
 
-    private void setNotificationFlag(boolean b) {
-        notificationIsAlreadySent = b;
-    }
 
-    private void sendNotificationIfNotificationFlagIsTrue() {
+    private void sendNotificationIfNotificationFlagIsTrue(String message, AtomicBoolean flag) {
         try {
-            if (!notificationIsAlreadySent) {
-                setNotificationFlag(true);
+            if (!flag.get()) {
+                flag.set(true);
                 DiscordWebhook discordWebhook = new DiscordWebhook(hookUrl);
                 discordWebhook.setAvatarUrl(avatar);
                 discordWebhook.setUsername(username);

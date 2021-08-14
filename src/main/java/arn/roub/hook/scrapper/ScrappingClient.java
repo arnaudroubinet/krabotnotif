@@ -47,7 +47,7 @@ public class ScrappingClient {
     }
 
 
-    public boolean hasNotification(String kiUser, String kiPassword) {
+    public ScrappingResponse hasNotification(String kiUser, String kiPassword) {
         try {
             HttpResponse<String> response = httpClient.send(loadKi, HttpResponse.BodyHandlers.ofString());
             if (response.body().contains("IDENTIFIER")) {
@@ -56,7 +56,9 @@ public class ScrappingClient {
                 httpClient.send(authKi.POST(HttpRequest.BodyPublishers.ofString(body)).build(), HttpResponse.BodyHandlers.ofString());
                 response = httpClient.send(loadKi, HttpResponse.BodyHandlers.ofString());
             }
-            return response.body().contains("Messages non lus dans votre rapport.");
+            var report = response.body().contains("Messages non lus dans votre rapport.");
+            var kramail = response.body().contains("nouveau kramail");
+            return ScrappingResponse.of(kramail,report);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
