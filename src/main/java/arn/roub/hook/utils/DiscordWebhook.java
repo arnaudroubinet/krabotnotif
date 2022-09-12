@@ -1,28 +1,39 @@
 package arn.roub.hook.utils;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.net.ssl.HttpsURLConnection;
-import java.awt.Color;
+import java.awt.*;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.Array;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Class used to execute Discord Webhooks with low effort
  */
 public class DiscordWebhook {
+    private static final String X_RATE_LIMIT_LIMIT = "X-RateLimit-Limit";
+    private static final String X_RATE_LIMIT_REMAINING = "X-RateLimit-Remaining";
+    private static final String X_RATE_LIMIT_RESET = "X-RateLimit-Reset";
+    private static final String X_RATE_LIMIT_RESET_AFTER = "X-RateLimit-Reset-After";
+    private static final String X_RATE_LIMIT_BUCKET = "X-RateLimit-Bucket";
 
+    private final Logger LOGGER = LoggerFactory.getLogger(DiscordWebhook.class);
     private final String url;
     private String content;
     private String username;
     private String avatarUrl;
+
+    private OffsetDateTime resetAfter;
     private boolean tts;
-    private List<EmbedObject> embeds = new ArrayList<>();
+    private final List<EmbedObject> embeds = new ArrayList<>();
 
     /**
      * Constructs a new DiscordWebhook instance
@@ -54,6 +65,14 @@ public class DiscordWebhook {
     }
 
     public void execute() throws IOException {
+
+        if (resetAfter != null && resetAfter.isAfter(OffsetDateTime.now())) {
+            LOGGER.warn("Discord RateLimit reach and will be reset after {}. The notification sent is delay.", resetAfter);
+            throw new PostponedNotificationException();
+        } else {
+            resetAfter = null;
+        }
+
         if (this.content == null && this.embeds.isEmpty()) {
             throw new IllegalArgumentException("Set content or add at least one EmbedObject");
         }
@@ -151,7 +170,35 @@ public class DiscordWebhook {
         stream.flush();
         stream.close();
 
-        connection.getInputStream().close(); //I'm not sure why but it doesn't work without getting the InputStream
+        int responseCode = connection.getResponseCode();
+        if (responseCode != 200 && responseCode != 204)
+            LOGGER.warn("Response code : {}", responseCode);
+        else
+            LOGGER.debug("Response code : {}", responseCode);
+
+        Optional.ofNullable(connection.getHeaderField(X_RATE_LIMIT_REMAINING.toLowerCase()))
+                .map(Long::valueOf)
+                .ifPresent(remaining -> {
+                            if (remaining <= 0) {
+                                LOGGER.warn("{} : {}", X_RATE_LIMIT_LIMIT, connection.getHeaderField(X_RATE_LIMIT_LIMIT.toLowerCase()));
+                                LOGGER.warn("{} : {}", X_RATE_LIMIT_REMAINING, remaining);
+                                LOGGER.warn("{} : {}", X_RATE_LIMIT_RESET, connection.getHeaderField(X_RATE_LIMIT_RESET.toLowerCase()));
+                                LOGGER.warn("{} : {}", X_RATE_LIMIT_RESET_AFTER, connection.getHeaderField(X_RATE_LIMIT_RESET_AFTER.toLowerCase()));
+                                LOGGER.warn("{} : {}", X_RATE_LIMIT_BUCKET, connection.getHeaderField(X_RATE_LIMIT_BUCKET.toLowerCase()));
+                                resetAfter = OffsetDateTime.ofInstant(Instant.ofEpochSecond(Long.parseLong(connection.getHeaderField(X_RATE_LIMIT_RESET.toLowerCase()))), ZoneOffset.systemDefault());
+                                LOGGER.warn("Rate limit will be reset after : {}", resetAfter);
+                            } else {
+                                LOGGER.debug("{} : {}", X_RATE_LIMIT_LIMIT, connection.getHeaderField(X_RATE_LIMIT_LIMIT.toLowerCase()));
+                                LOGGER.debug("{} : {}", X_RATE_LIMIT_REMAINING, remaining);
+                                LOGGER.debug("{} : {}", X_RATE_LIMIT_RESET, connection.getHeaderField(X_RATE_LIMIT_RESET.toLowerCase()));
+                                LOGGER.debug("{} : {}", X_RATE_LIMIT_RESET_AFTER, connection.getHeaderField(X_RATE_LIMIT_RESET_AFTER.toLowerCase()));
+                                LOGGER.debug("{} : {}", X_RATE_LIMIT_BUCKET, connection.getHeaderField(X_RATE_LIMIT_BUCKET.toLowerCase()));
+                                LOGGER.debug("Rate limit will be reset after : {}", OffsetDateTime.ofInstant(Instant.ofEpochSecond(Long.parseLong(connection.getHeaderField(X_RATE_LIMIT_RESET.toLowerCase()))), ZoneOffset.systemDefault()));
+                            }
+                        }
+                );
+
+        connection.getInputStream().close();
         connection.disconnect();
     }
 
@@ -165,7 +212,7 @@ public class DiscordWebhook {
         private Thumbnail thumbnail;
         private Image image;
         private Author author;
-        private List<Field> fields = new ArrayList<>();
+        private final List<Field> fields = new ArrayList<>();
 
         public String getTitle() {
             return title;

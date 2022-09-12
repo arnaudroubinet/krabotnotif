@@ -1,6 +1,7 @@
 package arn.roub.hook.errors;
 
 import arn.roub.hook.utils.DiscordWebhook;
+import arn.roub.hook.utils.PostponedNotificationException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -42,6 +43,8 @@ public class ExceptionNotificationService {
 
             discordWebhook.setTts(false);
             discordWebhook.execute();
+        } catch (PostponedNotificationException pnex) {
+            //Do nothing
         } catch (Exception e) {
             throw new RuntimeException(e);
 

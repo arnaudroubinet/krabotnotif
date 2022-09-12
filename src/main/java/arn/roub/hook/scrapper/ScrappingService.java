@@ -1,6 +1,7 @@
 package arn.roub.hook.scrapper;
 
 import arn.roub.hook.utils.DiscordWebhook;
+import arn.roub.hook.utils.PostponedNotificationException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -73,6 +74,8 @@ public class ScrappingService {
                 discordWebhook.setTts(false);
                 discordWebhook.execute();
             }
+        } catch (PostponedNotificationException ex) {
+            flag.set(false);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -86,6 +89,8 @@ public class ScrappingService {
             discordWebhook.setContent(firstMessage);
             discordWebhook.setTts(false);
             discordWebhook.execute();
+        } catch (PostponedNotificationException ex) {
+            //Do nothing
         } catch (Exception e) {
             throw new RuntimeException(e);
 

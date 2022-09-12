@@ -18,6 +18,8 @@ public class ScrappingClient {
     private final HttpRequest loadKi;
     private final HttpRequest.Builder authKi;
 
+    private final static int MAX_PASSWORD_SIZE = 8;
+
     public ScrappingClient() {
         try {
             httpClient = HttpClient.newBuilder()
@@ -51,7 +53,7 @@ public class ScrappingClient {
         try {
             HttpResponse<String> response = httpClient.send(loadKi, HttpResponse.BodyHandlers.ofString());
             if (response.body().contains("IDENTIFIER")) {
-                String realPassword = kiPassword.length() > 5 ? kiPassword.substring(0, 8) : kiPassword;
+                String realPassword = kiPassword.length() > MAX_PASSWORD_SIZE ? kiPassword.substring(0, MAX_PASSWORD_SIZE) : kiPassword;
                 String body = "p1=" + kiUser + "&p2=" + realPassword + "&Submit=Ok!";
                 httpClient.send(authKi.POST(HttpRequest.BodyPublishers.ofString(body)).build(), HttpResponse.BodyHandlers.ofString());
                 response = httpClient.send(loadKi, HttpResponse.BodyHandlers.ofString());
