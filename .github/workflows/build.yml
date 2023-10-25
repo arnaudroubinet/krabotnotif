@@ -1,5 +1,8 @@
 name: Build
-on: push
+on:
+  - push
+  - release
+  - workflow_dispatch
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -33,15 +36,3 @@ jobs:
         with:
           gradle-version: current
           arguments: build -Dquarkus.package.type=native -Dquarkus.native.container-build=true -Dquarkus.container-image.push=true --scan
-      - name: "Add Build Scan URL as PR comment"
-        uses: actions/github-script@v5
-        if: github.event_name == 'pull_request' && failure()
-        with:
-          github-token: ${{secrets.GITHUB_TOKEN}}
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '❌ ${{ github.workflow }} failed: ${{ steps.gradle.outputs.build-scan-url }}'
-            })
