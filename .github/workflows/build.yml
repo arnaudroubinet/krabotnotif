@@ -9,27 +9,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Set up JDK 21
-        uses: graalvm/setup-graalvm@v1
-        with:
-          java-version: '21'
-          distribution: 'graalvm'
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Echo step
-        run: |
-          echo "GRAALVM_HOME: $GRAALVM_HOME"
-          echo "JAVA_HOME: $JAVA_HOME"
-          java --version
-          native-image --version
-
-      - name: Validate Gradle wrapper
-        uses: gradle/wrapper-validation-action@v1
-
-      - uses: gradle/gradle-build-action@v2.4.2
-        with:
-          gradle-version: current
-          arguments: build -Dquarkus.package.type=native -Dquarkus.native.container-build=true
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -43,6 +22,7 @@ jobs:
         name: Build and push
         uses: docker/build-push-action@v5
         with:
+          context: .
           file: /src/main/docker/Dockerfile.multistage
           push: true
-          tags: arnaudroubinet/krabotnotif:snapshot, arnaudroubinet/krabotnotif:latest
+          tags: arnaudroubinet/krabotnotif:snapshot,arnaudroubinet/krabotnotif:latest
