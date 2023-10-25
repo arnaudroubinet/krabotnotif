@@ -1,6 +1,6 @@
-package arn.roub.hook.scrapper;
+package arn.roub.krabot.scrapper;
 
-import org.springframework.stereotype.Service;
+import jakarta.enterprise.context.ApplicationScoped;
 
 import java.net.CookieManager;
 import java.net.ProxySelector;
@@ -11,7 +11,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 
-@Service
+@ApplicationScoped
 public class ScrappingClient {
 
     private final HttpClient httpClient;

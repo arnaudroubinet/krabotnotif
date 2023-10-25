@@ -1,13 +1,15 @@
-package arn.roub.hook.scrapper;
+package arn.roub.krabot.scrapper;
 
-import arn.roub.hook.utils.DiscordWebhook;
-import arn.roub.hook.utils.PostponedNotificationException;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
+import arn.roub.krabot.utils.DiscordWebhook;
+import arn.roub.krabot.utils.PostponedNotificationException;
+import jakarta.enterprise.context.ApplicationScoped;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-@Service
+
+@ApplicationScoped
 public class ScrappingService {
 
     private final String hookUrl;
@@ -24,15 +26,15 @@ public class ScrappingService {
     private final AtomicBoolean kramailNotificationIsAlreadySentFlag = new AtomicBoolean(false);
 
     public ScrappingService(
-            @Value("${discord.hook.url}") String hookUrl,
-            @Value("${discord.hook.avatar.url}") String avatar,
-            @Value("${discord.hook.username}") String username,
-            @Value("${discord.hook.message.notification}") String notificationMessage,
-            @Value("${discord.hook.message.kramail}") String kramailMessage,
-            @Value("${discord.hook.firstMessage}") String firstMessage,
             ScrappingClient scrappingClient,
-            @Value("${kraland.user}") String kiUser,
-            @Value("${kraland.password}") String kiPassword) {
+            @ConfigProperty(name = "discord.hook.url") String hookUrl,
+            @ConfigProperty(name = "discord.hook.avatar.url") String avatar,
+            @ConfigProperty(name = "discord.hook.username") String username,
+            @ConfigProperty(name = "discord.hook.message.notification") String notificationMessage,
+            @ConfigProperty(name = "discord.hook.message.kramail") String kramailMessage,
+            @ConfigProperty(name = "discord.hook.firstMessage") String firstMessage,
+            @ConfigProperty(name = "kraland.user") String kiUser,
+            @ConfigProperty(name = "kraland.password") String kiPassword) {
         this.hookUrl = hookUrl;
         this.avatar = avatar;
         this.username = username;

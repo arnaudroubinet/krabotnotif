@@ -1,10 +1,16 @@
-package arn.roub.hook.utils;
+package arn.roub.krabot.utils;
 
+import arn.roub.krabot.utils.elements.Author;
+import arn.roub.krabot.utils.elements.EmbedObject;
+import arn.roub.krabot.utils.elements.Field;
+import arn.roub.krabot.utils.elements.Footer;
+import arn.roub.krabot.utils.elements.Image;
+import arn.roub.krabot.utils.elements.Thumbnail;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.HttpsURLConnection;
-import java.awt.*;
+import java.awt.Color;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.Array;
@@ -12,8 +18,12 @@ import java.net.URL;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.*;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 /**
  * Class used to execute Discord Webhooks with low effort
@@ -103,11 +113,11 @@ public class DiscordWebhook {
                     jsonEmbed.put("color", rgb);
                 }
 
-                EmbedObject.Footer footer = embed.getFooter();
-                EmbedObject.Image image = embed.getImage();
-                EmbedObject.Thumbnail thumbnail = embed.getThumbnail();
-                EmbedObject.Author author = embed.getAuthor();
-                List<EmbedObject.Field> fields = embed.getFields();
+                Footer footer = embed.getFooter();
+                Image image = embed.getImage();
+                Thumbnail thumbnail = embed.getThumbnail();
+                Author author = embed.getAuthor();
+                List<Field> fields = embed.getFields();
 
                 if (footer != null) {
                     JSONObject jsonFooter = new JSONObject();
@@ -135,18 +145,18 @@ public class DiscordWebhook {
                     JSONObject jsonAuthor = new JSONObject();
 
                     jsonAuthor.put("name", author.getName());
-                    jsonAuthor.put("url", author.getUrl());
+                    jsonAuthor.put("url", author.getIconUrl());
                     jsonAuthor.put("icon_url", author.getIconUrl());
                     jsonEmbed.put("author", jsonAuthor);
                 }
 
                 List<JSONObject> jsonFields = new ArrayList<>();
-                for (EmbedObject.Field field : fields) {
+                for (Field field : fields) {
                     JSONObject jsonField = new JSONObject();
 
                     jsonField.put("name", field.getName());
                     jsonField.put("value", field.getValue());
-                    jsonField.put("inline", field.isInline());
+                    jsonField.put("inline", field.getValue());
 
                     jsonFields.add(jsonField);
                 }
@@ -202,191 +212,9 @@ public class DiscordWebhook {
         connection.disconnect();
     }
 
-    public static class EmbedObject {
-        private String title;
-        private String description;
-        private String url;
-        private Color color;
 
-        private Footer footer;
-        private Thumbnail thumbnail;
-        private Image image;
-        private Author author;
-        private final List<Field> fields = new ArrayList<>();
 
-        public String getTitle() {
-            return title;
-        }
-
-        public String getDescription() {
-            return description;
-        }
-
-        public String getUrl() {
-            return url;
-        }
-
-        public Color getColor() {
-            return color;
-        }
-
-        public Footer getFooter() {
-            return footer;
-        }
-
-        public Thumbnail getThumbnail() {
-            return thumbnail;
-        }
-
-        public Image getImage() {
-            return image;
-        }
-
-        public Author getAuthor() {
-            return author;
-        }
-
-        public List<Field> getFields() {
-            return fields;
-        }
-
-        public EmbedObject setTitle(String title) {
-            this.title = title;
-            return this;
-        }
-
-        public EmbedObject setDescription(String description) {
-            this.description = description;
-            return this;
-        }
-
-        public EmbedObject setUrl(String url) {
-            this.url = url;
-            return this;
-        }
-
-        public EmbedObject setColor(Color color) {
-            this.color = color;
-            return this;
-        }
-
-        public EmbedObject setFooter(String text, String icon) {
-            this.footer = new Footer(text, icon);
-            return this;
-        }
-
-        public EmbedObject setThumbnail(String url) {
-            this.thumbnail = new Thumbnail(url);
-            return this;
-        }
-
-        public EmbedObject setImage(String url) {
-            this.image = new Image(url);
-            return this;
-        }
-
-        public EmbedObject setAuthor(String name, String url, String icon) {
-            this.author = new Author(name, url, icon);
-            return this;
-        }
-
-        public EmbedObject addField(String name, String value, boolean inline) {
-            this.fields.add(new Field(name, value, inline));
-            return this;
-        }
-
-        private class Footer {
-            private String text;
-            private String iconUrl;
-
-            private Footer(String text, String iconUrl) {
-                this.text = text;
-                this.iconUrl = iconUrl;
-            }
-
-            private String getText() {
-                return text;
-            }
-
-            private String getIconUrl() {
-                return iconUrl;
-            }
-        }
-
-        private class Thumbnail {
-            private String url;
-
-            private Thumbnail(String url) {
-                this.url = url;
-            }
-
-            private String getUrl() {
-                return url;
-            }
-        }
-
-        private class Image {
-            private String url;
-
-            private Image(String url) {
-                this.url = url;
-            }
-
-            private String getUrl() {
-                return url;
-            }
-        }
-
-        private class Author {
-            private String name;
-            private String url;
-            private String iconUrl;
-
-            private Author(String name, String url, String iconUrl) {
-                this.name = name;
-                this.url = url;
-                this.iconUrl = iconUrl;
-            }
-
-            private String getName() {
-                return name;
-            }
-
-            private String getUrl() {
-                return url;
-            }
-
-            private String getIconUrl() {
-                return iconUrl;
-            }
-        }
-
-        private class Field {
-            private String name;
-            private String value;
-            private boolean inline;
-
-            private Field(String name, String value, boolean inline) {
-                this.name = name;
-                this.value = value;
-                this.inline = inline;
-            }
-
-            private String getName() {
-                return name;
-            }
-
-            private String getValue() {
-                return value;
-            }
-
-            private boolean isInline() {
-                return inline;
-            }
-        }
-    }
-
-    private class JSONObject {
+    private static class JSONObject {
 
         private final HashMap<String, Object> map = new HashMap<>();
 
@@ -414,7 +242,7 @@ public class DiscordWebhook {
                 } else if (val instanceof Boolean) {
                     builder.append(val);
                 } else if (val instanceof JSONObject) {
-                    builder.append(val.toString());
+                    builder.append(val);
                 } else if (val.getClass().isArray()) {
                     builder.append("[");
                     int len = Array.getLength(val);

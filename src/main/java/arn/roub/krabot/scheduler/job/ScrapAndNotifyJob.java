@@ -1,16 +1,16 @@
-package arn.roub.hook.quartz.job;
+package arn.roub.krabot.scheduler.job;
 
-import arn.roub.hook.errors.ExceptionNotificationService;
-import arn.roub.hook.scrapper.ScrappingService;
-import org.quartz.Job;
-import org.quartz.JobExecutionContext;
-import org.quartz.JobExecutionException;
+import arn.roub.krabot.errors.ExceptionNotificationService;
+import arn.roub.krabot.scrapper.ScrappingService;
+import io.quarkus.scheduler.Scheduled;
+import jakarta.enterprise.context.ApplicationScoped;
+import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
 
-@Component
-public class ScrapAndNotifyJob implements Job {
+@ApplicationScoped
+@AllArgsConstructor
+public class ScrapAndNotifyJob {
 
     private final ScrappingService scrappingService;
 
@@ -18,12 +18,8 @@ public class ScrapAndNotifyJob implements Job {
 
     private final Logger LOGGER = LoggerFactory.getLogger(ScrapAndNotifyJob.class);
 
-    public ScrapAndNotifyJob(ScrappingService scrappingService, ExceptionNotificationService exceptionNotificationService) {
-        this.scrappingService = scrappingService;
-        this.exceptionNotificationService = exceptionNotificationService;
-    }
-
-    public void execute(JobExecutionContext context) throws JobExecutionException {
+    @Scheduled(every = "10s")
+    public void execute() {
         try {
             scrappingService.loadKiAndSendNotificationIfWeHaveReport();
         } catch (RuntimeException runtimeException) {
@@ -34,7 +30,6 @@ public class ScrapAndNotifyJob implements Job {
                 LOGGER.error("Error occur during the error notification !!", exceptionManagementError);
                 runtimeException.addSuppressed(exceptionManagementError);
             }
-            throw new JobExecutionException(runtimeException);
         }
     }
 
