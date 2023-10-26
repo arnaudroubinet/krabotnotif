@@ -21,3 +21,4 @@ jobs:
           QUARKUS_CONTAINER_IMAGE_GROUP: arnaudroubinet
           QUARKUS_CONTAINER_IMAGE_NAME: krabotnotif
           QUARKUS_CONTAINER_IMAGE_TAG: snapshot
+          QUARKUS_NATIVE_ENABLE_HTTPS_URL_HANDLER: true
