@@ -21,5 +21,4 @@ jobs:
           QUARKUS_CONTAINER_IMAGE_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}  
           QUARKUS_CONTAINER_IMAGE_GROUP: arnaudroubinet
           QUARKUS_CONTAINER_IMAGE_NAME: krabotnotif
-          QUARKUS_CONTAINER_IMAGE_TAG: latest
-          QUARKUS_CONTAINER_IMAGE_ADDITIONAL_TAGS: snapshot
+          QUARKUS_CONTAINER_IMAGE_TAG: snapshot
