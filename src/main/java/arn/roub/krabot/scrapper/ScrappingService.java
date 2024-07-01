@@ -2,6 +2,7 @@ package arn.roub.krabot.scrapper;
 
 import arn.roub.krabot.utils.DiscordWebhook;
 import arn.roub.krabot.utils.PostponedNotificationException;
+import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
@@ -18,6 +19,7 @@ public class ScrappingService {
     private final String notificationMessage;
     private final String kramailMessage;
     private final String firstMessage;
+    private final String lastMessage;
     private final ScrappingClient scrappingClient;
     private final String kiUser;
     private final String kiPassword;
@@ -33,6 +35,7 @@ public class ScrappingService {
             @ConfigProperty(name = "discord.hook.message.notification") String notificationMessage,
             @ConfigProperty(name = "discord.hook.message.kramail") String kramailMessage,
             @ConfigProperty(name = "discord.hook.firstMessage") String firstMessage,
+            @ConfigProperty(name = "discord.hook.lastMessage") String lastMessage,
             @ConfigProperty(name = "kraland.user") String kiUser,
             @ConfigProperty(name = "kraland.password") String kiPassword) {
         this.hookUrl = hookUrl;
@@ -41,11 +44,17 @@ public class ScrappingService {
         this.notificationMessage = notificationMessage;
         this.kramailMessage = kramailMessage;
         this.firstMessage = firstMessage;
+        this.lastMessage =lastMessage;
         this.scrappingClient = scrappingClient;
         this.kiUser = kiUser;
         this.kiPassword = kiPassword;
 
         initializeService();
+    }
+
+    @PreDestroy
+    void destroy() {
+        sendNotificationIfNotificationFlagIsTrue(lastMessage, new AtomicBoolean(false));
     }
 
     public void loadKiAndSendNotificationIfWeHaveReport() {
