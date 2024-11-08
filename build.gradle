@@ -8,22 +8,25 @@ repositories {
     mavenLocal()
 }
 
+
 dependencies {
+    implementation enforcedPlatform(libs.quarkus)
+
     implementation 'io.quarkus:quarkus-container-image-docker'
-    implementation enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
     implementation 'io.quarkus:quarkus-arc'
     implementation 'io.quarkus:quarkus-scheduler'
     implementation 'io.quarkus:quarkus-rest'
-    compileOnly 'org.projectlombok:lombok:1.18.34'
-    annotationProcessor 'org.projectlombok:lombok:1.18.34'
-    testCompileOnly 'org.projectlombok:lombok:1.18.34'
-    testAnnotationProcessor 'org.projectlombok:lombok:1.18.34'
     testImplementation 'io.quarkus:quarkus-junit5'
     testImplementation 'io.rest-assured:rest-assured'
+
+    compileOnly (libs.lombok)
+    annotationProcessor (libs.lombok)
+    testCompileOnly (libs.lombok)
+    testAnnotationProcessor (libs.lombok)
 }
 
 group 'arn.roub.krabot'
-version '2.0.2'
+version '2.0.3'
 
 java {
     sourceCompatibility = JavaVersion.VERSION_21

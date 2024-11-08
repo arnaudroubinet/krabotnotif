@@ -6,6 +6,7 @@ import arn.roub.krabot.utils.elements.Field;
 import arn.roub.krabot.utils.elements.Footer;
 import arn.roub.krabot.utils.elements.Image;
 import arn.roub.krabot.utils.elements.Thumbnail;
+import lombok.Setter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,6 +15,7 @@ import java.awt.Color;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.Array;
+import java.net.URI;
 import java.net.URL;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -37,11 +39,15 @@ public class DiscordWebhook {
 
     private final Logger LOGGER = LoggerFactory.getLogger(DiscordWebhook.class);
     private final String url;
+    @Setter
     private String content;
+    @Setter
     private String username;
+    @Setter
     private String avatarUrl;
 
     private OffsetDateTime resetAfter;
+    @Setter
     private boolean tts;
     private final List<EmbedObject> embeds = new ArrayList<>();
 
@@ -52,22 +58,6 @@ public class DiscordWebhook {
      */
     public DiscordWebhook(String url) {
         this.url = url;
-    }
-
-    public void setContent(String content) {
-        this.content = content;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public void setAvatarUrl(String avatarUrl) {
-        this.avatarUrl = avatarUrl;
-    }
-
-    public void setTts(boolean tts) {
-        this.tts = tts;
     }
 
     public void addEmbed(EmbedObject embed) {
@@ -168,7 +158,7 @@ public class DiscordWebhook {
             json.put("embeds", embedObjects.toArray());
         }
 
-        URL url = new URL(this.url);
+        URL url = URI.create(this.url).toURL();
         HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
         connection.addRequestProperty("Content-Type", "application/json");
         connection.addRequestProperty("User-Agent", "Kraland web hook");
