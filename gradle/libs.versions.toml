@@ -1,6 +1,6 @@
 [versions]
 lombokVersion="1.18.36"
-quarkusVersion="3.16.2"
+quarkusVersion="3.16.3"
 
 [libraries]
 lombok = { group = "org.projectlombok", name = "lombok", version.ref = "lombokVersion" }
