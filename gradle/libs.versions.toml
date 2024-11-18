@@ -1,5 +1,5 @@
 [versions]
-lombokVersion="1.18.34"
+lombokVersion="1.18.36"
 quarkusVersion="3.16.2"
 
 [libraries]
