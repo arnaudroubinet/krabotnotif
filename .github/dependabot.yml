@@ -13,7 +13,6 @@ updates:
       prefix: "deps"
     labels:
       - "dependencies"
-      - "gradle"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
