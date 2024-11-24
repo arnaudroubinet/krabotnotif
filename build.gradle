@@ -16,6 +16,7 @@ dependencies {
     implementation 'io.quarkus:quarkus-arc'
     implementation 'io.quarkus:quarkus-scheduler'
     implementation 'io.quarkus:quarkus-rest'
+    implementation (libs.jsoup)
     testImplementation 'io.quarkus:quarkus-junit5'
     testImplementation 'io.rest-assured:rest-assured'
 

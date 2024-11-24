@@ -1,6 +1,9 @@
 package arn.roub.krabot.scrapper;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.select.Elements;
 
 import java.net.CookieManager;
 import java.net.ProxySelector;
@@ -10,6 +13,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.ArrayList;
 
 @ApplicationScoped
 public class ScrappingClient {
@@ -32,7 +36,7 @@ public class ScrappingClient {
                     .build();
 
 
-            loadKi = HttpRequest.newBuilder(new URI("http://www.kraland.org/main.php?p=1")).GET().build();
+            loadKi = HttpRequest.newBuilder(new URI("http://www.kraland.org/main.php?p=8_1")).GET().build();
             authKi = HttpRequest.newBuilder(new URI("http://www.kraland.org/main.php?p=1&a=100"))
                     .headers("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:91.0) Gecko/20100101 Firefox/91.0",
                             "Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
@@ -58,9 +62,28 @@ public class ScrappingClient {
                 httpClient.send(authKi.POST(HttpRequest.BodyPublishers.ofString(body)).build(), HttpResponse.BodyHandlers.ofString());
                 response = httpClient.send(loadKi, HttpResponse.BodyHandlers.ofString());
             }
-            var report = response.body().contains("Messages non lus dans votre rapport.");
-            var kramail = response.body().contains("nouveau kramail");
-            return ScrappingResponse.of(kramail,report);
+            var report = response.body().contains("http://img.kraland.org/css/3/report2.gif");
+            var kramails = new ArrayList<Kramail>();
+
+            // Convertir la chaîne HTML en InputStream
+            Document document = Jsoup.parse(response.body());
+
+            // Récupérer toutes les balises <img>
+            Elements imgNodes = document.select("img");
+
+            imgNodes.forEach(element -> {
+                if ("http://img.kraland.org/5/kmn.gif".equals(element.attr("src")) && !"Marquer comme lu/non lu".equals(element.attr("alt"))) {
+                    var parent = element.parent().parent();
+                    kramails.add(Kramail.builder()
+                            .id(parent.getAllElements().get(4).childNode(0).attr("value"))
+                            .title(parent.getAllElements().get(7).childNode(0).attr("#text"))
+                            .originator(parent.getAllElements().get(8).childNode(0).attr("#text"))
+                            .build());
+                }
+            });
+
+
+            return ScrappingResponse.of(kramails, report);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

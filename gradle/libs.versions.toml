@@ -1,7 +1,9 @@
 [versions]
 lombokVersion="1.18.34"
 quarkusVersion="3.16.2"
+jsoupVersion="1.18.1"
 
 [libraries]
 lombok = { group = "org.projectlombok", name = "lombok", version.ref = "lombokVersion" }
 quarkus= { group = "io.quarkus.platform", name = 'quarkus-bom', version.ref = "quarkusVersion" }
+jsoup = { group = "org.jsoup", name = 'jsoup', version.ref = "jsoupVersion" }

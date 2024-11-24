@@ -1,8 +1,10 @@
 package arn.roub.krabot.scrapper;
 
-public record ScrappingResponse(boolean hasKramail, boolean hasNotification) {
+import java.util.List;
 
-    public static ScrappingResponse of(boolean hasKramail, boolean hasNotification) {
-        return new ScrappingResponse(hasKramail, hasNotification);
+public record ScrappingResponse(List<Kramail> kramails, boolean hasNotification) {
+
+    public static ScrappingResponse of(List<Kramail> kramails, boolean hasNotification) {
+        return new ScrappingResponse(kramails, hasNotification);
     }
 }

@@ -7,6 +7,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 
@@ -25,7 +27,7 @@ public class ScrappingService {
     private final String kiPassword;
 
     private final AtomicBoolean reportNotificationIsAlreadySentFlag = new AtomicBoolean(false);
-    private final AtomicBoolean kramailNotificationIsAlreadySentFlag = new AtomicBoolean(false);
+    private final ConcurrentHashMap<String, AtomicBoolean> kramailNotifAlreadySent = new ConcurrentHashMap<>();
 
     public ScrappingService(
             ScrappingClient scrappingClient,
@@ -66,10 +68,26 @@ public class ScrappingService {
             reportNotificationIsAlreadySentFlag.set(false);
         }
 
-        if (response.hasKramail()) {
-            sendNotificationIfNotificationFlagIsTrue(kramailMessage, kramailNotificationIsAlreadySentFlag);
+        if (!response.kramails().isEmpty()) {
+            response.kramails().forEach(kramail -> {
+                AtomicBoolean isAlreadySent = kramailNotifAlreadySent.getOrDefault(kramail.id(),new AtomicBoolean());
+                if(!isAlreadySent.get()) {
+                    String message = kramailMessage
+                            .replace("*title*", kramail.title())
+                            .replace("*originator*", kramail.originator());
+
+                    sendNotificationIfNotificationFlagIsTrue(message, isAlreadySent);
+                }
+                kramailNotifAlreadySent.put(kramail.id(),isAlreadySent);
+            });
+
+            List<String> currents = response.kramails().stream().map(Kramail::id).toList();
+            kramailNotifAlreadySent.keySet()
+                    .stream()
+                    .filter(key -> !currents.contains(key))
+                    .forEach(kramailNotifAlreadySent::remove);
         } else {
-            kramailNotificationIsAlreadySentFlag.set(false);
+            kramailNotifAlreadySent.clear();
         }
     }
 
