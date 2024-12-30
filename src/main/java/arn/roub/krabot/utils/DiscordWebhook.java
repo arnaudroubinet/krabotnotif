@@ -17,6 +17,7 @@ import java.io.OutputStream;
 import java.lang.reflect.Array;
 import java.net.URI;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -166,7 +167,7 @@ public class DiscordWebhook {
         connection.setRequestMethod("POST");
 
         OutputStream stream = connection.getOutputStream();
-        stream.write(json.toString().getBytes());
+        stream.write(json.toString().getBytes(StandardCharsets.ISO_8859_1));
         stream.flush();
         stream.close();
 

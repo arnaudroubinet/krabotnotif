@@ -5,8 +5,6 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 
-import com.cronutils.utils.StringUtils;
-
 import java.net.CookieManager;
 import java.net.ProxySelector;
 import java.net.URI;
@@ -14,12 +12,9 @@ import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
-
-import javax.management.RuntimeErrorException;
 
 @ApplicationScoped
 public class ScrappingClient {
@@ -61,7 +56,7 @@ public class ScrappingClient {
 
     public ScrappingResponse hasNotification(String kiUser, String kiPassword) {
         try {
-            HttpResponse<String> response = httpClient.send(loadKi, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = httpClient.send(loadKi, HttpResponse.BodyHandlers.ofString(StandardCharsets.ISO_8859_1));
             if (response.body().contains("IDENTIFIER")) {
                 String realPassword = kiPassword.length() > MAX_PASSWORD_SIZE ? kiPassword.substring(0, MAX_PASSWORD_SIZE) : kiPassword;
                 String body = "p1=" + kiUser + "&p2=" + realPassword + "&Submit=Ok!";
@@ -71,19 +66,19 @@ public class ScrappingClient {
             var report = response.body().contains("http://img.kraland.org/css/3/report2.gif");
             var kramails = new ArrayList<Kramail>();
 
-            // Convertir la chaîne HTML en InputStream
+            // Convertir la chaîne HTML en InputStream);
             Document document = Jsoup.parse(response.body());
-
             // Récupérer toutes les balises <img>
             Elements imgNodes = document.select("img");
 
             imgNodes.forEach(element -> {
                 if ("http://img.kraland.org/5/kmn.gif".equals(element.attr("src")) && !"Marquer comme lu/non lu".equals(element.attr("alt"))) {
                     var parent = element.parent().parent();
+
                     kramails.add(Kramail.builder()
-                            .id(toUTF8(parent.getAllElements().get(4).childNode(0).attr("value"),document.charset()))
-                            .title(toUTF8(parent.getAllElements().get(7).childNode(0).attr("#text"),document.charset()))
-                            .originator(toUTF8(parent.getAllElements().get(8).childNode(0).attr("#text"),document.charset()))
+                            .id(parent.getAllElements().get(4).childNode(0).attr("value"))
+                            .title(parent.getAllElements().get(7).childNode(0).attr("#text"))
+                            .originator(parent.getAllElements().get(8).childNode(0).attr("#text"))
                             .build());
                 }
             });
@@ -94,13 +89,4 @@ public class ScrappingClient {
             throw new RuntimeException(e);
         }
     }
-
-    public String toUTF8(String string, Charset source){
-        try{
-        return new String(string.getBytes(source.name()), StandardCharsets.UTF_8);
-        }catch(Exception ex){
-            throw new RuntimeException("Cant convert to UTF-8 from " + source.name(),ex);
-        }
-    }
-
 }
