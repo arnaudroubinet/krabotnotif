@@ -61,10 +61,6 @@ public class DiscordWebhook {
         this.url = url;
     }
 
-    public void addEmbed(EmbedObject embed) {
-        this.embeds.add(embed);
-    }
-
     public void execute() throws IOException {
 
         if (resetAfter != null && resetAfter.isAfter(OffsetDateTime.now())) {

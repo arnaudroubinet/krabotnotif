@@ -3,6 +3,7 @@ package arn.roub.krabot.scrapper;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import java.net.CookieManager;
@@ -15,6 +16,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Optional;
 
 @ApplicationScoped
 public class ScrappingClient {
@@ -73,8 +75,7 @@ public class ScrappingClient {
 
             imgNodes.forEach(element -> {
                 if ("http://img.kraland.org/5/kmn.gif".equals(element.attr("src")) && !"Marquer comme lu/non lu".equals(element.attr("alt"))) {
-                    var parent = element.parent().parent();
-
+                    var parent = Optional.ofNullable(element.parent()).map(Element::parent).orElseThrow();
                     kramails.add(Kramail.builder()
                             .id(parent.getAllElements().get(4).childNode(0).attr("value"))
                             .title(parent.getAllElements().get(7).childNode(0).attr("#text"))
