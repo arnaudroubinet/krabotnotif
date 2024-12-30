@@ -1,17 +1,10 @@
 package arn.roub.krabot.utils;
 
-import arn.roub.krabot.utils.elements.Author;
-import arn.roub.krabot.utils.elements.EmbedObject;
-import arn.roub.krabot.utils.elements.Field;
-import arn.roub.krabot.utils.elements.Footer;
-import arn.roub.krabot.utils.elements.Image;
-import arn.roub.krabot.utils.elements.Thumbnail;
 import lombok.Setter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.HttpsURLConnection;
-import java.awt.Color;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.Array;
@@ -21,9 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -50,8 +41,6 @@ public class DiscordWebhook {
     private OffsetDateTime resetAfter;
     @Setter
     private boolean tts;
-    private final List<EmbedObject> embeds = new ArrayList<>();
-
     /**
      * Constructs a new DiscordWebhook instance
      *
@@ -70,7 +59,7 @@ public class DiscordWebhook {
             resetAfter = null;
         }
 
-        if (this.content == null && this.embeds.isEmpty()) {
+        if (this.content == null) {
             throw new IllegalArgumentException("Set content or add at least one EmbedObject");
         }
 
@@ -81,83 +70,9 @@ public class DiscordWebhook {
         json.put("avatar_url", this.avatarUrl);
         json.put("tts", this.tts);
 
-        if (!this.embeds.isEmpty()) {
-            List<JSONObject> embedObjects = new ArrayList<>();
-
-            for (EmbedObject embed : this.embeds) {
-                JSONObject jsonEmbed = new JSONObject();
-
-                jsonEmbed.put("title", embed.getTitle());
-                jsonEmbed.put("description", embed.getDescription());
-                jsonEmbed.put("url", embed.getUrl());
-
-                if (embed.getColor() != null) {
-                    Color color = embed.getColor();
-                    int rgb = color.getRed();
-                    rgb = (rgb << 8) + color.getGreen();
-                    rgb = (rgb << 8) + color.getBlue();
-
-                    jsonEmbed.put("color", rgb);
-                }
-
-                Footer footer = embed.getFooter();
-                Image image = embed.getImage();
-                Thumbnail thumbnail = embed.getThumbnail();
-                Author author = embed.getAuthor();
-                List<Field> fields = embed.getFields();
-
-                if (footer != null) {
-                    JSONObject jsonFooter = new JSONObject();
-
-                    jsonFooter.put("text", footer.getText());
-                    jsonFooter.put("icon_url", footer.getIconUrl());
-                    jsonEmbed.put("footer", jsonFooter);
-                }
-
-                if (image != null) {
-                    JSONObject jsonImage = new JSONObject();
-
-                    jsonImage.put("url", image.getUrl());
-                    jsonEmbed.put("image", jsonImage);
-                }
-
-                if (thumbnail != null) {
-                    JSONObject jsonThumbnail = new JSONObject();
-
-                    jsonThumbnail.put("url", thumbnail.getUrl());
-                    jsonEmbed.put("thumbnail", jsonThumbnail);
-                }
-
-                if (author != null) {
-                    JSONObject jsonAuthor = new JSONObject();
-
-                    jsonAuthor.put("name", author.getName());
-                    jsonAuthor.put("url", author.getIconUrl());
-                    jsonAuthor.put("icon_url", author.getIconUrl());
-                    jsonEmbed.put("author", jsonAuthor);
-                }
-
-                List<JSONObject> jsonFields = new ArrayList<>();
-                for (Field field : fields) {
-                    JSONObject jsonField = new JSONObject();
-
-                    jsonField.put("name", field.getName());
-                    jsonField.put("value", field.getValue());
-                    jsonField.put("inline", field.getValue());
-
-                    jsonFields.add(jsonField);
-                }
-
-                jsonEmbed.put("fields", jsonFields.toArray());
-                embedObjects.add(jsonEmbed);
-            }
-
-            json.put("embeds", embedObjects.toArray());
-        }
-
         URL url = URI.create(this.url).toURL();
         HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
-        connection.addRequestProperty("Content-Type", "application/json");
+        connection.addRequestProperty("Content-Type", "application/json;  charset=ISO-8859-1'");
         connection.addRequestProperty("User-Agent", "Kraland web hook");
         connection.setDoOutput(true);
         connection.setRequestMethod("POST");
