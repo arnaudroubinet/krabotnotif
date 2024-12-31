@@ -18,7 +18,7 @@ public class ScrapAndNotifyJob {
 
     private final Logger LOGGER = LoggerFactory.getLogger(ScrapAndNotifyJob.class);
 
-    @Scheduled(every = "10s")
+    @Scheduled(every = "{scheduler.every}")
     public void execute() {
         try {
             scrappingService.loadKiAndSendNotificationIfWeHaveReport();
