@@ -6,11 +6,9 @@ import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
-
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 
 @ApplicationScoped
 public class ScrappingService {
@@ -46,7 +44,7 @@ public class ScrappingService {
         this.notificationMessage = notificationMessage;
         this.kramailMessage = kramailMessage;
         this.firstMessage = firstMessage;
-        this.lastMessage =lastMessage;
+        this.lastMessage = lastMessage;
         this.scrappingClient = scrappingClient;
         this.kiUser = kiUser;
         this.kiPassword = kiPassword;
@@ -60,37 +58,49 @@ public class ScrappingService {
     }
 
     public void loadKiAndSendNotificationIfWeHaveReport() {
-        ScrappingResponse response = scrappingClient.hasNotification(kiUser, kiPassword);
-
-        if (response.hasNotification()) {
-            sendNotificationIfNotificationFlagIsTrue(notificationMessage, reportNotificationIsAlreadySentFlag);
-        } else {
-            reportNotificationIsAlreadySentFlag.set(false);
-        }
-
-        if (!response.kramails().isEmpty()) {
-            response.kramails().forEach(kramail -> {
-                AtomicBoolean isAlreadySent = kramailNotifAlreadySent.getOrDefault(kramail.id(),new AtomicBoolean());
-                if(!isAlreadySent.get()) {
-                    String message = kramailMessage
-                            .replace("*title*", kramail.title())
-                            .replace("*originator*", kramail.originator());
-
-                    sendNotificationIfNotificationFlagIsTrue(message, isAlreadySent);
-                }
-                kramailNotifAlreadySent.put(kramail.id(),isAlreadySent);
-            });
-
-            List<String> currents = response.kramails().stream().map(Kramail::id).toList();
-            kramailNotifAlreadySent.keySet()
-                    .stream()
-                    .filter(key -> !currents.contains(key))
-                    .forEach(kramailNotifAlreadySent::remove);
-        } else {
-            kramailNotifAlreadySent.clear();
-        }
+        loadKiAndSendNotificationIfWeHaveReport(0);
     }
 
+    public void loadKiAndSendNotificationIfWeHaveReport(int errorcounter) {
+        try {
+            ScrappingResponse response = scrappingClient.hasNotification(kiUser, kiPassword);
+
+            if (response.hasNotification()) {
+                sendNotificationIfNotificationFlagIsTrue(notificationMessage, reportNotificationIsAlreadySentFlag);
+            } else {
+                reportNotificationIsAlreadySentFlag.set(false);
+            }
+
+            if (!response.kramails().isEmpty()) {
+                response.kramails().forEach(kramail -> {
+                    AtomicBoolean isAlreadySent = kramailNotifAlreadySent.getOrDefault(kramail.id(),
+                            new AtomicBoolean());
+                    if (!isAlreadySent.get()) {
+                        String message = kramailMessage
+                                .replace("*title*", kramail.title())
+                                .replace("*originator*", kramail.originator());
+
+                        sendNotificationIfNotificationFlagIsTrue(message, isAlreadySent);
+                    }
+                    kramailNotifAlreadySent.put(kramail.id(), isAlreadySent);
+                });
+
+                List<String> currents = response.kramails().stream().map(Kramail::id).toList();
+                kramailNotifAlreadySent.keySet()
+                        .stream()
+                        .filter(key -> !currents.contains(key))
+                        .forEach(kramailNotifAlreadySent::remove);
+            } else {
+                kramailNotifAlreadySent.clear();
+            }
+        } catch (RuntimeException ex) {
+            if (errorcounter > 2) {
+                throw ex;
+            } else {
+                loadKiAndSendNotificationIfWeHaveReport(errorcounter++);
+            }
+        }
+    }
 
     private void sendNotificationIfNotificationFlagIsTrue(String message, AtomicBoolean flag) {
         try {
@@ -119,7 +129,7 @@ public class ScrappingService {
             discordWebhook.setTts(false);
             discordWebhook.execute();
         } catch (PostponedNotificationException ex) {
-            //Do nothing
+            // Do nothing
         } catch (Exception e) {
             throw new RuntimeException(e);
 
