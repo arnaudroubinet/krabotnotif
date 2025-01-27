@@ -1,6 +1,6 @@
 [versions]
 lombokVersion="1.18.36"
-quarkusVersion="3.17.7"
+quarkusVersion="3.17.8"
 jsoupVersion="1.18.3"
 
 [libraries]
