@@ -28,7 +28,7 @@ dependencies {
 }
 
 group 'arn.roub.krabot'
-version '2.2.0'
+version '2.2.2'
 
 java {
     sourceCompatibility = JavaVersion.VERSION_21
