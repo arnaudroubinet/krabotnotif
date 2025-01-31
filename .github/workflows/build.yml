@@ -8,13 +8,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - uses: actions/setup-java@v4
         with:
           distribution: 'zulu' # See 'Supported distributions' for available options
           java-version: '21'
-      - name : chown
-        run: chmod +x gradlew
-      - name: Execute Gradle build
-        run: ./gradlew build -Dquarkus.native.enabled=true -Dquarkus.native.container-build=true -Dquarkus.package.jar.enabled=false -Dquarkus.native.builder-image=graalvm -Dquarkus.container-image.push=false 
+
+      - name : Set executable permissions for maven
+        run: chmod +x ./mvnw
+
+      - name: Execute maven install an push image
+        run: ./mvnw install -Dquarkus.container-image.build=true -Dquarkus.container-image.push=false -Dquarkus.container-image.builder=docker
         env:
           QUARKUS_NATIVE_ENABLE_HTTPS_URL_HANDLER: true
