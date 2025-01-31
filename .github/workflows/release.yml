@@ -1,4 +1,4 @@
-name: Build
+name: Release
 on:
   - release
 jobs:
@@ -11,13 +11,14 @@ jobs:
         with:
           distribution: 'zulu' # See 'Supported distributions' for available options
           java-version: '21'
-      - name : chown
-        run: chmod +x gradlew
-      - name: Execute Gradle build
+      - name : Set executable permissions for gradlew
+        run: chmod +x ./gradlew
+      - name: Execute Gradle build an push image
         run: ./gradlew build -Dquarkus.native.enabled=true -Dquarkus.native.container-build=true -Dquarkus.package.jar.enabled=false -Dquarkus.native.builder-image=graalvm -Dquarkus.container-image.push=true
         env:
           QUARKUS_CONTAINER_IMAGE_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          QUARKUS_CONTAINER_IMAGE_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}  
+          QUARKUS_CONTAINER_IMAGE_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
+          QUARKUS_CONTAINER_IMAGE_REGISTRY: docker.io
           QUARKUS_CONTAINER_IMAGE_GROUP: arnaudroubinet
           QUARKUS_CONTAINER_IMAGE_NAME: krabotnotif
           QUARKUS_CONTAINER_IMAGE_TAG: latest
