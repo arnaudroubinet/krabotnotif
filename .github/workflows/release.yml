@@ -18,7 +18,7 @@ jobs:
         run: chmod +x ./mvnw
 
       - name: Execute maven install an push image
-        run: ./mvnw install -Dnative -DskipTests -Dquarkus.native.container-build=true -Dquarkus.container-image.push=true
+        run: ./mvnw install -Dquarkus.container-image.build=true -Dquarkus.container-image.push=true -Dquarkus.container-image.builder=docker
         env:
           QUARKUS_CONTAINER_IMAGE_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           QUARKUS_CONTAINER_IMAGE_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -28,6 +28,7 @@ jobs:
           QUARKUS_CONTAINER_IMAGE_TAG: latest
           QUARKUS_CONTAINER_IMAGE_ADDITIONAL_TAGS: ${{ github.event.release.tag_name }}
           QUARKUS_NATIVE_ENABLE_HTTPS_URL_HANDLER: true
+
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@0.29.0
         with:
