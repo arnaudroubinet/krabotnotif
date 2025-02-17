@@ -1,4 +1,4 @@
-Krabot notif est une application spring boot utilisant les webhook discord.
+Krabot notif est une application Quarkus utilisant les webhook discord.
 Elle va :
 - Se connecter à www.kraland.org
 - Vérifier toutes les minutes si vous avez reçu un message dans votre rapport ou un nouveau kramail
