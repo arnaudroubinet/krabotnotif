@@ -30,7 +30,7 @@ jobs:
           QUARKUS_NATIVE_ENABLE_HTTPS_URL_HANDLER: true
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.29.0
+        uses: aquasecurity/trivy-action@0.30.0
         with:
           image-ref: 'arnaudroubinet/krabotnotif:${{ github.event.release.tag_name }}'
           format: 'template'
