@@ -17,6 +17,23 @@ jobs:
       - name : Set executable permissions for maven
         run: chmod +x ./mvnw
 
+      - name: Extract version from tag
+        id: extract_version
+        run: echo ::set-output name=version::${GITHUB_REF#refs/tags/v}
+  
+      - name: Update Maven Version
+        run: mvn versions:set -DnewVersion=${{ steps.extract_version.outputs.version }}
+  
+      - name: Commit and push version update
+        run: |
+          git config --global user.name 'github-actions'
+          git config --global user.email 'github-actions@users.noreply.github.com'
+          git add pom.xml
+          git commit -m "Update version to ${{ steps.extract_version.outputs.version }}"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
       - name: Execute maven install an push image
         run: ./mvnw install -Dquarkus.container-image.build=true -Dquarkus.container-image.push=true -Dquarkus.container-image.builder=docker
         env:
