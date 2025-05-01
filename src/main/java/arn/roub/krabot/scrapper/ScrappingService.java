@@ -5,7 +5,6 @@ import arn.roub.krabot.utils.PostponedNotificationException;
 import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
-import arn.roub.krabot.scrapper.CurrentState;
 
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -102,7 +101,7 @@ public class ScrappingService {
             if (errorcounter > 2) {
                 throw ex;
             } else {
-                loadKiAndSendNotificationIfWeHaveReport(errorcounter++);
+                loadKiAndSendNotificationIfWeHaveReport(errorcounter + 1);
             }
         }
     }

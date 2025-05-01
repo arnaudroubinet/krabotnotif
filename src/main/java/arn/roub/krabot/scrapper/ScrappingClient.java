@@ -4,6 +4,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.jsoup.nodes.Node;
+import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
 
 import java.net.CookieManager;
@@ -77,9 +79,9 @@ public class ScrappingClient {
                 if ("http://img.kraland.org/5/kmn.gif".equals(element.attr("src")) && !"Marquer comme lu/non lu".equals(element.attr("alt"))) {
                     var parent = Optional.ofNullable(element.parent()).map(Element::parent).orElseThrow();
                     kramails.add(Kramail.builder()
-                            .id(parent.getAllElements().get(4).childNode(0).attr("value"))
-                            .title(parent.getAllElements().get(7).childNode(0).attr("#text"))
-                            .originator(parent.getAllElements().get(8).childNode(0).attr("#text"))
+                            .id(parent.childNodes().get(2).childNode(0).attr("value"))
+                            .title(parent.childNodes().get(3).childNode(0).childNodes().stream().filter(node -> TextNode.class.isAssignableFrom(node.getClass())).reduce(Node::after).get().outerHtml())
+                            .originator(parent.childNodes().get(4).childNode(0).outerHtml())
                             .build());
                 }
             });
