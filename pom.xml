@@ -4,8 +4,24 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>arn.roub.krabot</groupId>
     <artifactId>krabotnotif</artifactId>
-    <version>2.2.9</version>
-
+    <version>2.2.16</version>
+    <description>A project to notify using Discord Webhooks.</description>
+    <url>https://github.com/arnaudroubinet/krabotnotif</url>
+    <inceptionYear>2023</inceptionYear>
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+    <developers>
+        <developer>
+            <id>arnaudroubinet</id>
+            <name>Arnaud Roubinet</name>
+            <email>arnaud@roubinet.fr</email>
+        </developer>
+    </developers>
     <properties>
         <compiler-plugin.version>3.14.0</compiler-plugin.version>
         <maven.compiler.release>21</maven.compiler.release>
@@ -16,9 +32,11 @@
         <quarkus.platform.version>3.22.2</quarkus.platform.version>
         <skipITs>true</skipITs>
         <surefire-plugin.version>3.5.3</surefire-plugin.version>
-
-        <jsoup.version>1.19.1</jsoup.version>
+        <jsoup.version>1.20.1</jsoup.version>
         <lombok.version>1.18.38</lombok.version>
+        <jreleaser.version>1.18.0</jreleaser.version>
+        <executable-suffix/>
+        <distribution.directory>${project.build.directory}/distributions</distribution.directory>
     </properties>
 
     <dependencyManagement>
@@ -132,8 +150,23 @@
                     </systemPropertyVariables>
                 </configuration>
             </plugin>
+            <plugin>
+        <groupId>eu.maveniverse.maven.plugins</groupId>
+        <artifactId>nisse-plugin3</artifactId>
+        <version>0.4.0</version>
+        <executions>
+          <execution>
+            <id>inject-properties</id>
+              <goals>
+                <goal>inject-properties</goal>
+              </goals>
+              <phase>validate</phase>
+            </execution>
+          </executions>
+        </plugin>
         </plugins>
     </build>
+
     <profiles>
         <profile>
             <id>native</id>
@@ -147,5 +180,99 @@
                 <quarkus.native.enabled>true</quarkus.native.enabled>
             </properties>
         </profile>
+            <profile>
+      <id>dist</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-assembly-plugin</artifactId>
+            <version>3.3.0</version>
+            <configuration>
+              <attach>false</attach>
+              <appendAssemblyId>false</appendAssemblyId>
+              <finalName>${project.artifactId}-${project.version}-linux-x86_64</finalName>
+              <outputDirectory>${distribution.directory}</outputDirectory>
+              <workDirectory>${project.build.directory}/assembly/work</workDirectory>
+              <descriptors>
+                <descriptor>src/main/assembly/assembly.xml</descriptor>
+              </descriptors>
+            </configuration>
+            <executions>
+              <execution>
+                <id>make-distribution</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>single</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <id>release</id>
+      <build>
+        <plugins>
+         <plugin>
+                <groupId>org.jreleaser</groupId>
+                <artifactId>jreleaser-maven-plugin</artifactId>
+                <version>${jreleaser.version}</version>
+                <configuration>
+                    <jreleaser>
+                        <announce>
+                        </announce>
+                        <packagers>
+                            <docker>
+                                <active>RELEASE</active>
+                                <imageNames>
+                                    <imageName>arnaudroubinet/krabotnotif:{{tagName}}</imageName>
+                                    <imageName>arnaudroubinet/krabotnotif:v{{projectVersionMajor}}</imageName>
+                                    <imageName>arnaudroubinet/krabotnotif:v{{projectVersionMajor}}.{{projectVersionMinor}}</imageName>
+                                    <imageName>arnaudroubinet/krabotnotif:latest</imageName>
+                                </imageNames>
+                                 <commitAuthor>
+                                    <name>Arnaud Roubinet</name>
+                                    <email>arnaud@roubinet.fr</email>
+                                </commitAuthor>
+                                <baseImage>gcr.io/distroless/base</baseImage>
+                                <registries>
+                                    <registry>
+                                        <serverName>DEFAULT</serverName>
+                                        <externalLogin>true</externalLogin>
+                                    </registry>
+                                </registries>
+                            </docker>
+                        </packagers>
+                        <release>
+                            <github>
+                                <changelog>
+                                    <formatted>ALWAYS</formatted>
+                                    <preset>conventional-commits</preset>
+                                </changelog>
+                            </github>
+                        </release>
+                        <distributions>
+                            <krabotnotif>
+                                <type>BINARY</type>
+                                <artifacts>
+                                    <artifact>
+                                        <path>${distribution.directory}/{{distributionName}}-{{projectVersion}}-linux-x86_64.zip</path>
+                                        <platform>linux-x86_64</platform>
+                                        <extraProperties>
+                                            <graalVMNativeImage>true</graalVMNativeImage>
+                                        </extraProperties>
+                                    </artifact>
+                                </artifacts>
+                            </krabotnotif>
+                        </distributions>
+                    </jreleaser>
+                </configuration>
+            </plugin>
+        </plugins>
+      </build>
+    </profile>
     </profiles>
 </project>

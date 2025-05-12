@@ -1,8 +1,8 @@
 name: Release
 on:
-  - release
+  workflow_dispatch:
 permissions:
-  contents: read 
+  contents: write 
   security-events: write
   actions: read
 jobs:
@@ -21,29 +21,50 @@ jobs:
       - name : Set executable permissions for maven
         run: chmod +x ./mvnw
 
-      - name: Extract version from tag
-        id: extract_version
-        run: echo ::set-output name=version::${GITHUB_REF#refs/tags/v}
-  
-      - name: Update Maven Version
-        run: mvn versions:set -DnewVersion=${{ steps.extract_version.outputs.version }}
-            
-      - name: Execute maven install an push image
-        run: ./mvnw install -Dquarkus.container-image.build=true -Dquarkus.container-image.push=true -Dquarkus.container-image.builder=docker
-        env:
-          QUARKUS_CONTAINER_IMAGE_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          QUARKUS_CONTAINER_IMAGE_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
-          QUARKUS_CONTAINER_IMAGE_REGISTRY: docker.io
-          QUARKUS_CONTAINER_IMAGE_GROUP: arnaudroubinet
-          QUARKUS_CONTAINER_IMAGE_NAME: krabotnotif
-          QUARKUS_CONTAINER_IMAGE_TAG: latest
-          QUARKUS_CONTAINER_IMAGE_ADDITIONAL_TAGS: ${{ github.event.release.tag_name }}
-          QUARKUS_NATIVE_ENABLE_HTTPS_URL_HANDLER: true
+      - name: Determine next version
+        id: next_version
+        run: |
+          latest_release=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest | jq -r .tag_name || echo "v0.0.0")
+          echo "latest_release=$latest_release"
+          version=$(echo $latest_release | sed 's/^v//')
+          echo "version=$version"
+          IFS='.' read -r major minor patch <<< "$version"
+          next_patch=$((patch + 1))
+          next_version="$major.$minor.$next_patch"
+          echo "next_version=$next_version" >> $GITHUB_ENV
+          echo "next_version=$next_version"
 
+      - name: Update Maven Version
+        run: mvn versions:set -DnewVersion=${{ env.next_version }}
+
+      - name: Build native app
+        run: ./mvnw package -Pnative -Pdist
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set JReleaser GitHub Token
+        run: echo "JRELEASER_GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
+ 
+      - name: Release
+        run: ./mvnw -Prelease jreleaser:full-release
+
+      - name: Commit, tag, and push updated Maven version
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add pom.xml
+          git commit -m "Update Maven version to ${{ env.next_version }}"
+          git tag v${{ env.next_version }}
+          git push --follow-tags
+          
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@0.30.0
         with:
-          image-ref: 'arnaudroubinet/krabotnotif:${{ github.event.release.tag_name }}'
+          image-ref: 'arnaudroubinet/krabotnotif:v${{ steps.extract_version.outputs.version }}'
           format: 'template'
           template: '@/contrib/sarif.tpl'
           output: 'trivy-results.sarif'
