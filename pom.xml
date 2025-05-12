@@ -35,6 +35,8 @@
         <jsoup.version>1.20.1</jsoup.version>
         <lombok.version>1.18.38</lombok.version>
         <jreleaser.version>1.18.0</jreleaser.version>
+        <executable-suffix/>
+        <distribution.directory>${project.build.directory}/distributions</distribution.directory>
     </properties>
 
     <dependencyManagement>
@@ -149,6 +151,82 @@
                 </configuration>
             </plugin>
             <plugin>
+        <groupId>eu.maveniverse.maven.plugins</groupId>
+        <artifactId>nisse-plugin3</artifactId>
+        <version>0.4.0</version>
+        <executions>
+          <execution>
+            <id>inject-properties</id>
+              <goals>
+                <goal>inject-properties</goal>
+              </goals>
+              <phase>validate</phase>
+            </execution>
+          </executions>
+        </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>native</id>
+            <activation>
+                <property>
+                    <name>native</name>
+                </property>
+            </activation>
+            <properties>
+                <skipITs>false</skipITs>
+                <quarkus.native.enabled>true</quarkus.native.enabled>
+            </properties>
+        </profile>
+            <profile>
+      <id>dist</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-assembly-plugin</artifactId>
+            <version>3.3.0</version>
+            <configuration>
+              <attach>false</attach>
+              <appendAssemblyId>false</appendAssemblyId>
+              <finalName>${project.artifactId}-${project.version}-${os.detected.classifier}</finalName>
+              <outputDirectory>${distribution.directory}</outputDirectory>
+              <workDirectory>${project.build.directory}/assembly/work</workDirectory>
+              <descriptors>
+                <descriptor>src/main/assembly/assembly.xml</descriptor>
+              </descriptors>
+            </configuration>
+            <executions>
+              <execution>
+                <id>make-distribution</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>single</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>dist-windows</id>
+      <activation>
+        <os>
+          <family>windows</family>
+        </os>
+      </activation>
+      <properties>
+        <executable-suffix>.exe</executable-suffix>
+      </properties>
+    </profile>
+        <profile>
+      <id>release</id>
+      <build>
+        <plugins>
+         <plugin>
                 <groupId>org.jreleaser</groupId>
                 <artifactId>jreleaser-maven-plugin</artifactId>
                 <version>${jreleaser.version}</version>
@@ -156,13 +234,29 @@
                     <jreleaser>
                         <announce>
                         </announce>
+                        <packagers>
+                            <docker>
+                                <active>RELEASE</active>
+                                <imageNames>
+                                    <imageName>arnaudroubinet/krabotnotif:{{tagName}}</imageName>
+                                    <imageName>arnaudroubinet/krabotnotif:v{{projectVersionMajor}}</imageName>
+                                    <imageName>arnaudroubinet/krabotnotif:v{{projectVersionMajor}}.{{projectVersionMinor}}</imageName>
+                                    <imageName>arnaudroubinet/krabotnotif:latest</imageName>
+                                </imageNames>
+                                <externalLogin>true</externalLogin>
+                                 <commitAuthor>
+                                    <name>Arnaud Roubinet</name>
+                                    <email>arnaud@roubinet.fr</email>
+                                </commitAuthor>
+                                <baseImage>gcr.io/distroless/base</baseImage>
+                            </docker>
+                        </packagers>
                         <release>
                             <github>
                                 <changelog>
                                     <formatted>ALWAYS</formatted>
                                     <preset>conventional-commits</preset>
                                 </changelog>
-                                <overwrite>true</overwrite>
                             </github>
                         </release>
                         <distributions>
@@ -183,21 +277,7 @@
                 </configuration>
             </plugin>
         </plugins>
-    </build>
-
-    <profiles>
-        <profile>
-            <id>native</id>
-            <activation>
-                <property>
-                    <name>native</name>
-                </property>
-            </activation>
-            <properties>
-                <skipITs>false</skipITs>
-                <quarkus.native.enabled>true</quarkus.native.enabled>
-            </properties>
-        </profile>
+      </build>
+    </profile>
     </profiles>
-
 </project>

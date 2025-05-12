@@ -27,23 +27,35 @@ jobs:
   
       - name: Update Maven Version
         run: mvn versions:set -DnewVersion=${{ steps.extract_version.outputs.version }}
-            
-      - name: Execute maven install an push image
-        run: ./mvnw install -Dquarkus.container-image.build=true -Dquarkus.container-image.push=true -Dquarkus.container-image.builder=docker
-        env:
-          QUARKUS_CONTAINER_IMAGE_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          QUARKUS_CONTAINER_IMAGE_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
-          QUARKUS_CONTAINER_IMAGE_REGISTRY: docker.io
-          QUARKUS_CONTAINER_IMAGE_GROUP: arnaudroubinet
-          QUARKUS_CONTAINER_IMAGE_NAME: krabotnotif
-          QUARKUS_CONTAINER_IMAGE_TAG: latest
-          QUARKUS_CONTAINER_IMAGE_ADDITIONAL_TAGS: ${{ github.event.release.tag_name }}
-          QUARKUS_NATIVE_ENABLE_HTTPS_URL_HANDLER: true
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+ 
+  #    - name: Execute maven install an push image
+  #      run: ./mvnw install -Dquarkus.container-image.build=true -Dquarkus.container-image.push=true -Dquarkus.container-image.builder=docker
+  #      env:
+  #        QUARKUS_CONTAINER_IMAGE_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+  #        QUARKUS_CONTAINER_IMAGE_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
+  #        QUARKUS_CONTAINER_IMAGE_REGISTRY: docker.io
+  #        QUARKUS_CONTAINER_IMAGE_GROUP: arnaudroubinet
+  #        QUARKUS_CONTAINER_IMAGE_NAME: krabotnotif
+  #        QUARKUS_CONTAINER_IMAGE_TAG: latest
+  #        QUARKUS_CONTAINER_IMAGE_ADDITIONAL_TAGS: ${{ github.event.release.tag_name }}
+  #        QUARKUS_NATIVE_ENABLE_HTTPS_URL_HANDLER: true
+
+      - name: Build native app
+        run: ./mvnw package -Pnative
+
+      - name: Release
+        run: ./mvnw -Prelease jreleaser:full-release -Djreleaser.select.current.platform -Djreleaser.dry.run=true
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@0.30.0
         with:
-          image-ref: 'arnaudroubinet/krabotnotif:${{ github.event.release.tag_name }}'
+          image-ref: 'arnaudroubinet/krabotnotif:v${{ steps.extract_version.outputs.version }}'
           format: 'template'
           template: '@/contrib/sarif.tpl'
           output: 'trivy-results.sarif'
