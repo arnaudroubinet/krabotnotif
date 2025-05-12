@@ -21,12 +21,27 @@ jobs:
       - name : Set executable permissions for maven
         run: chmod +x ./mvnw
 
-      - name: Extract version from tag
-        id: extract_version
-        run: echo ::set-output name=version::${GITHUB_REF#refs/tags/v}
-  
+      - name: Determine next version
+        id: next_version
+        run: |
+          latest_tag=$(git describe --tags --abbrev=0 || echo "v0.0.0")
+          version=$(echo $latest_tag | sed 's/^v//')
+          IFS='.' read -r major minor patch <<< "$version"
+          next_minor=$((minor + 1))
+          next_version="v$major.$next_minor.0"
+          echo "next_version=$next_version" >> $GITHUB_ENV
+
       - name: Update Maven Version
-        run: mvn versions:set -DnewVersion=${{ steps.extract_version.outputs.version }}
+        run: mvn versions:set -DnewVersion=${{ env.next_version }}
+
+      - name: Commit, tag, and push updated Maven version
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add pom.xml
+          git commit -m "Update Maven version to ${{ env.next_version }}"
+          git tag ${{ env.next_version }}
+          git push --follow-tags
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
