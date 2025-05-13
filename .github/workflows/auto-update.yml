@@ -20,7 +20,6 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '21'
-
       - name : Set executable permissions for maven
         run: chmod +x ./mvnw
 
@@ -32,16 +31,24 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           if [ -n "$(git status --porcelain)" ]; then
+            echo "changes_detected=true" >> $GITHUB_ENV
             echo "Changes detected. Proceeding to build and test."
           else
+            echo "changes_detected=false" >> $GITHUB_ENV
             echo "No changes detected. Exiting."
             exit 0
           fi
 
       - name: Build the application
+        if: env.changes_detected == 'true'
         run: ./mvnw clean install
 
+      - name: Run tests
+        if: env.changes_detected == 'true'
+        run: ./mvnw test
+
       - name: Create a new branch and commit changes
+        if: env.changes_detected == 'true'
         run: |
           BRANCH_NAME="auto-update-$(date +'%Y%m%d%H%M%S')"
           git checkout -b "$BRANCH_NAME"
@@ -50,6 +57,7 @@ jobs:
           git push origin "$BRANCH_NAME"
 
       - name: Create a pull request
+        if: env.changes_detected == 'true'
         uses: actions/github-script@v6
         id: create_pr
         with:
@@ -65,18 +73,18 @@ jobs:
             core.setOutput("pr_url", pullRequest.html_url);
 
       - name: Merge the pull request
+        if: env.changes_detected == 'true'
         uses: actions/github-script@v6
         with:
           script: |
-            const prNumber = await github.pulls.list({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              head: `${context.repo.owner}:${process.env.BRANCH_NAME}`
-            }).then(prs => prs.data[0].number);
+            const prNumber = core.getInput('pr_number');
+            if (!prNumber) {
+              throw new Error('Pull request number is missing.');
+            }
 
             await github.pulls.merge({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              pull_number: prNumber,
+              pull_number: parseInt(prNumber, 10),
               merge_method: "squash"
             });
