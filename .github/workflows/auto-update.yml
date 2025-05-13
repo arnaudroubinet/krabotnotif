@@ -60,7 +60,6 @@ jobs:
       - name: Create a pull request
         if: env.changes_detected == 'true'
         uses: actions/github-script@v6
-        id: create_pr
         with:
           script: |
             const branchName = process.env.BRANCH_NAME;
@@ -76,15 +75,14 @@ jobs:
               base: "master",
               body: "This PR includes automated updates for Quarkus and OpenRewrite changes."
             });
-            core.setOutput("pr_url", pullRequest.html_url);
-            core.setOutput("pr_number", pullRequest.number);
+            core.exportVariable('PR_ID', pullRequest.number);
 
       - name: Merge the pull request
         if: env.changes_detected == 'true'
         uses: actions/github-script@v6
         with:
           script: |
-            const prNumber = process.env.PR_NUMBER;
+            const prNumber = process.env.PR_ID;
             if (!prNumber) {
               throw new Error('Pull request number is missing.');
             }

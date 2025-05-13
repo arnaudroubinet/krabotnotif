@@ -80,7 +80,7 @@ public class ScrappingClient {
                     var parent = Optional.ofNullable(element.parent()).map(Element::parent).orElseThrow();
                     kramails.add(Kramail.builder()
                             .id(parent.childNodes().get(2).childNode(0).attr("value"))
-                            .title(parent.childNodes().get(3).childNode(0).childNodes().stream().filter(node -> TextNode.class.isAssignableFrom(node.getClass())).reduce(Node::after).get().outerHtml())
+                            .title(parent.childNodes().get(3).childNode(0).childNodes().stream().filter(node -> TextNode.class.isAssignableFrom(node.getClass())).reduce(Node::after).orElseThrow().outerHtml())
                             .originator(parent.childNodes().get(4).childNode(0).outerHtml())
                             .build());
                 }
