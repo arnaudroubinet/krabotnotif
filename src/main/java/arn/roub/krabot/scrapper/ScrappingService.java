@@ -25,12 +25,13 @@ public class ScrappingService {
     private final GithubScrappingClient githubScrappingClient;
     private final String kiUser;
     private final String kiPassword;
-    private String lastKnownReleaseTag;
     private final AtomicBoolean reportNotificationIsAlreadySentFlag = new AtomicBoolean(false);
     private final ConcurrentHashMap<String, AtomicBoolean> kramailNotifAlreadySent = new ConcurrentHashMap<>();
+    private final CurrentState currentState;
 
     public ScrappingService(
             KralandScrappingClient kralandScrappingClient,
+            CurrentState currentState,
             @ConfigProperty(name = "discord.hook.url") String hookUrl,
             @ConfigProperty(name = "discord.hook.avatar.url") String avatar,
             @ConfigProperty(name = "discord.hook.username") String username,
@@ -53,7 +54,8 @@ public class ScrappingService {
         this.githubScrappingClient = githubScrappingClient;
         this.kiUser = kiUser;
         this.kiPassword = kiPassword;
-        this.lastKnownReleaseTag = githubScrappingClient.getLastReleaseTag();
+        this.currentState = currentState;
+        this.currentState.setLatestVersion(githubScrappingClient.getLastReleaseTag());
 
         initializeService();
     }
@@ -73,9 +75,9 @@ public class ScrappingService {
 
             if (response.hasNotification()) {
                 sendNotificationIfNotificationFlagIsTrue(notificationMessage, reportNotificationIsAlreadySentFlag);
-                CurrentState.hasNotification = true;
+                currentState.setHasNotification(true);
             } else {
-                CurrentState.hasNotification = false;
+                currentState.setHasNotification(false);
                 reportNotificationIsAlreadySentFlag.set(false);
             }
 
@@ -102,7 +104,7 @@ public class ScrappingService {
                 kramailNotifAlreadySent.clear();
             }
 
-            CurrentState.nbkramail = kramailNotifAlreadySent.size();
+            currentState.setNbkramail(kramailNotifAlreadySent.size());
         } catch (RuntimeException ex) {
             if (errorcounter > 2) {
                 throw ex;
@@ -119,8 +121,8 @@ public class ScrappingService {
     public void loadGithubAndSendNotificationIfWeHaveNewRelease(int errorcounter) {
         try {
             String tag = githubScrappingClient.getLastReleaseTag();
-            if(!tag.equals(lastKnownReleaseTag)) {
-                lastKnownReleaseTag = tag;
+            if(!tag.equals(currentState.getLatestVersion())) {
+                currentState.setLatestVersion(tag);
                 String message = releaseMessage + " : https://github.com/arnaudroubinet/krabotnotif/releases/latest";
                 sendNotificationIfNotificationFlagIsTrue(message, new AtomicBoolean(false));
             }
