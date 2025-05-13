@@ -27,7 +27,7 @@ jobs:
   
       - name: Update Maven Version
         run: mvn versions:set -DnewVersion=${{ steps.extract_version.outputs.version }}
-            
+
       - name: Execute maven install an push image
         run: ./mvnw install -Dquarkus.container-image.build=true -Dquarkus.container-image.push=true -Dquarkus.container-image.builder=docker
         env:
@@ -39,6 +39,26 @@ jobs:
           QUARKUS_CONTAINER_IMAGE_TAG: latest
           QUARKUS_CONTAINER_IMAGE_ADDITIONAL_TAGS: ${{ github.event.release.tag_name }}
           QUARKUS_NATIVE_ENABLE_HTTPS_URL_HANDLER: true
+
+      - name: Check for changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "changes_detected=true" >> $GITHUB_ENV
+            echo "Changes detected. Proceeding to build and test."
+          else
+            echo "changes_detected=false" >> $GITHUB_ENV
+            echo "No changes detected. Exiting."
+            exit 0
+          fi
+
+      - name: Commit changes
+        if: env.changes_detected == 'true'
+        run: |
+          git add .
+          git commit -m "Set project version to ${{ steps.extract_version.outputs.version }}"
+          git push
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@0.30.0
