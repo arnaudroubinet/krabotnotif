@@ -84,12 +84,12 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            const prNumber = core.getInput('pr_number');
+            const prNumber = process.env.PR_NUMBER;
             if (!prNumber) {
               throw new Error('Pull request number is missing.');
             }
 
-            await github.pulls.merge({
+            await github.rest.pulls.merge({
               owner: context.repo.owner,
               repo: context.repo.repo,
               pull_number: parseInt(prNumber, 10),
