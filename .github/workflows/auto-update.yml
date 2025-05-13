@@ -1,0 +1,95 @@
+name: Auto Update
+
+on:
+  schedule:
+    - cron: "0 12 * * 6" # Tous les samedis à midi
+  workflow_dispatch: # Permet de lancer manuellement
+
+jobs:
+  auto-update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout master branch
+        uses: actions/checkout@v3
+        with:
+          ref: master
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+      - name : Set executable permissions for maven
+        run: chmod +x ./mvnw
+
+      - name: Update Quarkus
+        run: ./mvnw quarkus:update -Drewrite=true
+
+      - name: Check for changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "changes_detected=true" >> $GITHUB_ENV
+            echo "Changes detected. Proceeding to build and test."
+          else
+            echo "changes_detected=false" >> $GITHUB_ENV
+            echo "No changes detected. Exiting."
+            exit 0
+          fi
+
+      - name: Build the application
+        if: env.changes_detected == 'true'
+        run: ./mvnw clean install
+
+      - name: Run tests
+        if: env.changes_detected == 'true'
+        run: ./mvnw test
+
+      - name: Create a new branch and commit changes
+        if: env.changes_detected == 'true'
+        run: |
+          BRANCH_NAME="auto-update-$(date +'%Y%m%d%H%M%S')"
+          echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
+          git checkout -b "$BRANCH_NAME"
+          git add .
+          git commit -m "Auto-update: Quarkus and OpenRewrite changes"
+          git push origin "$BRANCH_NAME"
+
+      - name: Create a pull request
+        if: env.changes_detected == 'true'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const branchName = process.env.BRANCH_NAME;
+            if (!branchName) {
+              throw new Error('Branch name is missing.');
+            }
+
+            const { data: pullRequest } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: "Auto-update: Quarkus and OpenRewrite changes",
+              head: branchName,
+              base: "master",
+              body: "This PR includes automated updates for Quarkus and OpenRewrite changes."
+            });
+            core.exportVariable('PR_ID', pullRequest.number);
+
+      - name: Merge the pull request
+        if: env.changes_detected == 'true'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const prNumber = process.env.PR_ID;
+            if (!prNumber) {
+              throw new Error('Pull request number is missing.');
+            }
+
+            await github.rest.pulls.merge({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: parseInt(prNumber, 10),
+              merge_method: "squash"
+            });
