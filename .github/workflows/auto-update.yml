@@ -25,7 +25,7 @@ jobs:
         run: chmod +x ./mvnw
 
       - name: Update Quarkus
-        run: ./mvnw quarkus:update
+        run: ./mvnw quarkus:update -Drewrite=true
 
       - name: Check for changes
         run: |
@@ -40,9 +40,6 @@ jobs:
 
       - name: Build the application
         run: ./mvnw clean install
-
-      - name: Run tests
-        run: ./mvnw test
 
       - name: Create a new branch and commit changes
         run: |
