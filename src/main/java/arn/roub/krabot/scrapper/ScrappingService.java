@@ -20,24 +20,27 @@ public class ScrappingService {
     private final String kramailMessage;
     private final String firstMessage;
     private final String lastMessage;
-    private final ScrappingClient scrappingClient;
+    private final String releaseMessage;
+    private final KralandScrappingClient kralandScrappingClient;
+    private final GithubScrappingClient githubScrappingClient;
     private final String kiUser;
     private final String kiPassword;
-
+    private String lastKnownReleaseTag;
     private final AtomicBoolean reportNotificationIsAlreadySentFlag = new AtomicBoolean(false);
     private final ConcurrentHashMap<String, AtomicBoolean> kramailNotifAlreadySent = new ConcurrentHashMap<>();
 
     public ScrappingService(
-            ScrappingClient scrappingClient,
+            KralandScrappingClient kralandScrappingClient,
             @ConfigProperty(name = "discord.hook.url") String hookUrl,
             @ConfigProperty(name = "discord.hook.avatar.url") String avatar,
             @ConfigProperty(name = "discord.hook.username") String username,
             @ConfigProperty(name = "discord.hook.message.notification") String notificationMessage,
             @ConfigProperty(name = "discord.hook.message.kramail") String kramailMessage,
             @ConfigProperty(name = "discord.hook.firstMessage") String firstMessage,
-            @ConfigProperty(name = "discord.hook.lastMessage") String lastMessage,
+            @ConfigProperty(name = "discord.hook.lastMessage") String lastMessage, GithubScrappingClient githubScrappingClient,
             @ConfigProperty(name = "kraland.user") String kiUser,
-            @ConfigProperty(name = "kraland.password") String kiPassword) {
+            @ConfigProperty(name = "kraland.password") String kiPassword,
+            @ConfigProperty(name = "discord.hook.release") String releaseMessage) {
         this.hookUrl = hookUrl;
         this.avatar = avatar;
         this.username = username;
@@ -45,9 +48,12 @@ public class ScrappingService {
         this.kramailMessage = kramailMessage;
         this.firstMessage = firstMessage;
         this.lastMessage = lastMessage;
-        this.scrappingClient = scrappingClient;
+        this.releaseMessage = releaseMessage;
+        this.kralandScrappingClient = kralandScrappingClient;
+        this.githubScrappingClient = githubScrappingClient;
         this.kiUser = kiUser;
         this.kiPassword = kiPassword;
+        this.lastKnownReleaseTag = githubScrappingClient.getLastReleaseTag();
 
         initializeService();
     }
@@ -63,7 +69,7 @@ public class ScrappingService {
 
     public void loadKiAndSendNotificationIfWeHaveReport(int errorcounter) {
         try {
-            ScrappingResponse response = scrappingClient.hasNotification(kiUser, kiPassword);
+            ScrappingResponse response = kralandScrappingClient.hasNotification(kiUser, kiPassword);
 
             if (response.hasNotification()) {
                 sendNotificationIfNotificationFlagIsTrue(notificationMessage, reportNotificationIsAlreadySentFlag);
@@ -102,6 +108,27 @@ public class ScrappingService {
                 throw ex;
             } else {
                 loadKiAndSendNotificationIfWeHaveReport(errorcounter + 1);
+            }
+        }
+    }
+
+
+    public void loadGithubAndSendNotificationIfWeHaveNewRelease() {
+        loadGithubAndSendNotificationIfWeHaveNewRelease(0);
+    }
+    public void loadGithubAndSendNotificationIfWeHaveNewRelease(int errorcounter) {
+        try {
+            String tag = githubScrappingClient.getLastReleaseTag();
+            if(!tag.equals(lastKnownReleaseTag)) {
+                lastKnownReleaseTag = tag;
+                String message = releaseMessage + " : https://github.com/arnaudroubinet/krabotnotif/releases/latest";
+                sendNotificationIfNotificationFlagIsTrue(message, new AtomicBoolean(false));
+            }
+        } catch (RuntimeException ex) {
+            if (errorcounter > 2) {
+                throw ex;
+            } else {
+                loadGithubAndSendNotificationIfWeHaveNewRelease(errorcounter + 1);
             }
         }
     }

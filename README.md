@@ -19,8 +19,15 @@ DISCORD_KRAMAIL_MESSAGE : Le message en cas de réception de kramail
 DISCORD_NOTIFICATION_MESSAGE : Le message en cas de notification
 DISCORD_FIRST_MESSAGE : Le message lors de l'initialisation du scanner
 DISCORD_LAST_MESSAGE : Le message lors de l'extinction du scanner
+DISCORD_RELEASE_MESSAGE : Le message lors de la publication d'une nouvelle version
 DISCORD_ERROR_PREFIX_MESSAGE: Le message en prefix d'une exception
-JOB_SCHEDULER_EVERY : La récurrence du job, la valeur par défaut est 60s
+JOB_KRALAND_SCHEDULER_EVERY : La récurrence du job analysant kraland, la valeur par défaut est 60s
+JOB_GITHUB_SCHEDULER_CRON : La cron du job analysant github, la valeur par défaut est 0 0 11 ? * * * (Toutes les jours à 11h)
+```
+
+Deprecation et remplacement :
+```
+JOB_SCHEDULER_EVERY -> JOB_KRALAND_SCHEDULER_EVERY
 ```
 
 Pour DISCORD_KRAMAIL_MESSAGE, vous pouvez rajouter "\*originator\*" et "\*title\*" dans le message.
