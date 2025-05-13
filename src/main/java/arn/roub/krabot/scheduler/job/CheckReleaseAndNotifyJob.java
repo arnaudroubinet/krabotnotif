@@ -10,18 +10,18 @@ import org.slf4j.LoggerFactory;
 
 @ApplicationScoped
 @AllArgsConstructor
-public class ScrapAndNotifyJob {
+public class CheckReleaseAndNotifyJob {
 
     private final ScrappingService scrappingService;
 
     private final ExceptionNotificationService exceptionNotificationService;
 
-    private final Logger LOGGER = LoggerFactory.getLogger(ScrapAndNotifyJob.class);
+    private final Logger LOGGER = LoggerFactory.getLogger(CheckReleaseAndNotifyJob.class);
 
-    @Scheduled(every = "{scheduler.kraland.scraping.every}")
+    @Scheduled(cron = "{scheduler.github.scraping.cron}")
     public void execute() {
         try {
-            scrappingService.loadKiAndSendNotificationIfWeHaveReport();
+            scrappingService.loadGithubAndSendNotificationIfWeHaveNewRelease();
         } catch (RuntimeException runtimeException) {
             try {
                 LOGGER.error("Error occur during the scrap or the notification post.", runtimeException);

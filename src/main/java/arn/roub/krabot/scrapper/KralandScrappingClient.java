@@ -21,7 +21,7 @@ import java.util.ArrayList;
 import java.util.Optional;
 
 @ApplicationScoped
-public class ScrappingClient {
+public class KralandScrappingClient {
 
     private final HttpClient httpClient;
     private final HttpRequest loadKi;
@@ -29,7 +29,7 @@ public class ScrappingClient {
 
     private final static int MAX_PASSWORD_SIZE = 8;
 
-    public ScrappingClient() {
+    public KralandScrappingClient() {
         try {
             httpClient = HttpClient.newBuilder()
                     .connectTimeout(Duration.ofSeconds(30))
