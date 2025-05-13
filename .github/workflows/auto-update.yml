@@ -63,15 +63,21 @@ jobs:
         id: create_pr
         with:
           script: |
-            const { data: pullRequest } = await github.pulls.create({
+            const branchName = process.env.BRANCH_NAME;
+            if (!branchName) {
+              throw new Error('Branch name is missing.');
+            }
+
+            const { data: pullRequest } = await github.rest.pulls.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
               title: "Auto-update: Quarkus and OpenRewrite changes",
-              head: env.BRANCH_NAME,
+              head: branchName,
               base: "master",
               body: "This PR includes automated updates for Quarkus and OpenRewrite changes."
             });
             core.setOutput("pr_url", pullRequest.html_url);
+            core.setOutput("pr_number", pullRequest.number);
 
       - name: Merge the pull request
         if: env.changes_detected == 'true'
