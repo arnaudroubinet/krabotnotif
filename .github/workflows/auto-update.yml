@@ -21,6 +21,9 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
+      - name : Set executable permissions for maven
+        run: chmod +x ./mvnw
+
       - name: Update Quarkus
         run: ./mvnw quarkus:update
 
