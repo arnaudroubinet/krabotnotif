@@ -32,3 +32,10 @@ JOB_SCHEDULER_EVERY -> JOB_KRALAND_SCHEDULER_EVERY
 
 Pour DISCORD_KRAMAIL_MESSAGE, vous pouvez rajouter "\*originator\*" et "\*title\*" dans le message.
 Ces balises, serrons remplacées par les valeurs du message.
+
+Le numéro de version applique le [semver](https://semver.org/lang/fr/).  
+Étant donné un numéro de version MAJEUR.MINEUR.CORRECTIF, il faut incrémenter :
+
+    le numéro de version MAJEUR quand il y a des changements non rétrocompatibles,
+    le numéro de version MINEUR quand il y a des ajouts de fonctionnalités rétrocompatibles,
+    le numéro de version de CORRECTIF quand il y a des corrections d’anomalies rétrocompatibles.
