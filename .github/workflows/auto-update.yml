@@ -59,7 +59,7 @@ jobs:
 
       - name: Create a pull request
         if: env.changes_detected == 'true'
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           script: |
             const branchName = process.env.BRANCH_NAME;
@@ -79,7 +79,7 @@ jobs:
 
       - name: Merge the pull request
         if: env.changes_detected == 'true'
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           script: |
             const prNumber = process.env.PR_ID;
