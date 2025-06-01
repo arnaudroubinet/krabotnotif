@@ -67,7 +67,7 @@ public class KralandScrappingClient {
                 httpClient.send(authKi.POST(HttpRequest.BodyPublishers.ofString(body)).build(), HttpResponse.BodyHandlers.ofString());
                 response = httpClient.send(loadKi, HttpResponse.BodyHandlers.ofString());
             }
-            var report = response.body().matches(".*http://img\\.kraland\\.org/css/\\d+/report2\\.gif.*");
+            var report = response.body().contains("report2.gif");
             var kramails = new ArrayList<Kramail>();
 
             // Convertir la chaîne HTML en InputStream);
