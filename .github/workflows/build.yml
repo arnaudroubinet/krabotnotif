@@ -36,8 +36,8 @@ jobs:
           docker buildx build --platform linux/amd64,linux/arm64 \
             -f src/main/docker/Dockerfile.jvm \
             -t krabotnotif-jvm:latest \
-            --push
+            --push .
           docker buildx build --platform linux/amd64,linux/arm64 \
             -f src/main/docker/Dockerfile.native \
             -t krabotnotif-native:latest \
-            --push
+            --push .
