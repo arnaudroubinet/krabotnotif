@@ -23,7 +23,7 @@ jobs:
 
       - name: Extract version from tag
         id: extract_version
-        run: echo ::set-output name=version::${GITHUB_REF#refs/tags/v}
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
   
       - name: Update Maven Version
         run: mvn versions:set -DnewVersion=${{ steps.extract_version.outputs.version }}
@@ -41,9 +41,10 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Execute maven install
-        run: ./mvnw install
-        env:
-          QUARKUS_NATIVE_ENABLE_HTTPS_URL_HANDLER: true
+        run: ./mvnw clean install
+
+      - name: Build native application
+        run: ./mvnw package -Pnative
 
       - name: Build and push multi-arch Docker images
         run: |
@@ -93,7 +94,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
 
       - name: Run Trivy vulnerability scanner for native image
-        uses: aquasecurity/trivy-action@0.31.0
+        uses: aquasecurity/trivy-action@0.46.0
         with:
           image-ref: 'arnaudroubinet/krabotnotif:${{ github.event.release.tag_name }}-native'
           format: 'template'
@@ -112,6 +113,9 @@ jobs:
         with:
           sarif_file: 'trivy-results-native.sarif'
           category: native-image
+          template: '@/contrib/sarif.tpl'
+          output: 'trivy-results-native.sarif'
+          severity: 'CRITICAL,HIGH'
 
       - name: Update personal instance by calling his update webhook
         run: |

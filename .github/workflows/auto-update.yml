@@ -77,8 +77,16 @@ jobs:
               title: "Auto-update: Quarkus and OpenRewrite changes",
               head: branchName,
               base: "master",
-              body: "This PR includes automated updates for Quarkus and OpenRewrite changes."
+              body: "This PR includes automated updates for Quarkus and OpenRewrite changes.\n\nAutomatic updates triggered by scheduled workflow."
             });
+            
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pullRequest.number,
+              labels: ['automated-pr', 'dependencies']
+            });
+            
             core.exportVariable('PR_ID', pullRequest.number);
 
       - name: Merge the pull request
