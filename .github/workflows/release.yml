@@ -28,17 +28,40 @@ jobs:
       - name: Update Maven Version
         run: mvn versions:set -DnewVersion=${{ steps.extract_version.outputs.version }}
 
-      - name: Execute maven install an push image
-        run: ./mvnw install -Dquarkus.container-image.build=true -Dquarkus.container-image.push=true -Dquarkus.container-image.builder=docker
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Execute maven install
+        run: ./mvnw install
         env:
-          QUARKUS_CONTAINER_IMAGE_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          QUARKUS_CONTAINER_IMAGE_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
-          QUARKUS_CONTAINER_IMAGE_REGISTRY: docker.io
-          QUARKUS_CONTAINER_IMAGE_GROUP: arnaudroubinet
-          QUARKUS_CONTAINER_IMAGE_NAME: krabotnotif
-          QUARKUS_CONTAINER_IMAGE_TAG: latest
-          QUARKUS_CONTAINER_IMAGE_ADDITIONAL_TAGS: ${{ github.event.release.tag_name }}
           QUARKUS_NATIVE_ENABLE_HTTPS_URL_HANDLER: true
+
+      - name: Build and push multi-arch Docker images
+        run: |
+          docker buildx create --name multiarch --use || true
+          
+          # Build and push JVM image
+          docker buildx build --platform linux/amd64,linux/arm64 \
+            -f src/main/docker/Dockerfile.jvm \
+            -t arnaudroubinet/krabotnotif:latest \
+            -t arnaudroubinet/krabotnotif:${{ github.event.release.tag_name }} \
+            --push .
+
+          # Build and push native image
+          docker buildx build --platform linux/amd64,linux/arm64 \
+            -f src/main/docker/Dockerfile.native \
+            -t arnaudroubinet/krabotnotif:latest-native \
+            -t arnaudroubinet/krabotnotif:${{ github.event.release.tag_name }}-native \
+            --push .
 
       - name: Check for changes
         run: |
@@ -60,19 +83,35 @@ jobs:
           git commit -m "Set project version to ${{ steps.extract_version.outputs.version }}"
           git push
 
-      - name: Run Trivy vulnerability scanner
+      - name: Run Trivy vulnerability scanner for JVM image
         uses: aquasecurity/trivy-action@0.31.0
         with:
           image-ref: 'arnaudroubinet/krabotnotif:${{ github.event.release.tag_name }}'
           format: 'template'
           template: '@/contrib/sarif.tpl'
-          output: 'trivy-results.sarif'
+          output: 'trivy-results-jvm.sarif'
           severity: 'CRITICAL,HIGH'
 
-      - name: Upload Trivy scan results to GitHub Security tab
+      - name: Run Trivy vulnerability scanner for native image
+        uses: aquasecurity/trivy-action@0.31.0
+        with:
+          image-ref: 'arnaudroubinet/krabotnotif:${{ github.event.release.tag_name }}-native'
+          format: 'template'
+          template: '@/contrib/sarif.tpl'
+          output: 'trivy-results-native.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy JVM scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: 'trivy-results.sarif'
+          sarif_file: 'trivy-results-jvm.sarif'
+          category: jvm-image
+
+      - name: Upload Trivy native scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results-native.sarif'
+          category: native-image
 
       - name: Update personal instance by calling his update webhook
         run: |

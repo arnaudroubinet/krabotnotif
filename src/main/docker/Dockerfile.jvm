@@ -77,9 +77,10 @@
 #   accessed directly. (example: "foo.example.com,bar.example.com")
 #
 ###
-FROM registry.access.redhat.com/ubi9/openjdk-21:latest
+FROM --platform=$TARGETPLATFORM registry.access.redhat.com/ubi9/openjdk-21:latest
 
 ENV LANGUAGE='en_US:en'
+ARG TARGETPLATFORM
 
 
 # We make four distinct layers so if there are application changes the library layers can be re-used

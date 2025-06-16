@@ -19,7 +19,25 @@ jobs:
       - name : Set executable permissions for maven
         run: chmod +x ./mvnw
 
-      - name: Execute maven install an push image
-        run: ./mvnw install -Dquarkus.container-image.build=true -Dquarkus.container-image.push=false -Dquarkus.container-image.builder=docker
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        
+      - name: Execute maven install
+        run: ./mvnw install
         env:
           QUARKUS_NATIVE_ENABLE_HTTPS_URL_HANDLER: true
+
+      - name: Build multi-arch Docker images
+        run: |
+          docker buildx create --name multiarch --use || true
+          docker buildx build --platform linux/amd64,linux/arm64 \
+            -f src/main/docker/Dockerfile.jvm \
+            -t krabotnotif-jvm:latest \
+            --load .
+          docker buildx build --platform linux/amd64,linux/arm64 \
+            -f src/main/docker/Dockerfile.native \
+            -t krabotnotif-native:latest \
+            --load .
