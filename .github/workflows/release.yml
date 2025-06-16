@@ -1,6 +1,7 @@
 name: Release
 on:
-  - release
+  release:
+    types: [published]
 permissions:
   contents: read 
   security-events: write
