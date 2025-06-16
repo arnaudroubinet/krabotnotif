@@ -95,7 +95,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
 
       - name: Run Trivy vulnerability scanner for native image
-        uses: aquasecurity/trivy-action@0.46.0
+        uses: aquasecurity/trivy-action@0.31.0
         with:
           image-ref: 'arnaudroubinet/krabotnotif:${{ github.event.release.tag_name }}-native'
           format: 'template'
