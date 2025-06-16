@@ -82,6 +82,5 @@ services:
 - xxx-native
 
 ## Types d'images :
-- snapshot-xxx : l'image du dernier build
 - latest-xxx : l'image de la dernière release
 - 1.2.3-xxx : l'image pour une release définie
