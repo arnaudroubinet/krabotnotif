@@ -35,9 +35,9 @@ jobs:
           docker buildx create --name multiarch --use || true
           docker buildx build --platform linux/amd64,linux/arm64 \
             -f src/main/docker/Dockerfile.jvm \
-            -t krabotnotif-jvm:latest \
+            -t krabotnotif:jvm-snapshot \
             --push .
           docker buildx build --platform linux/amd64,linux/arm64 \
             -f src/main/docker/Dockerfile.native \
-            -t krabotnotif-native:latest \
+            -t krabotnotif:native-snapshot \
             --push .
