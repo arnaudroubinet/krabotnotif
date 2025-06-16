@@ -80,3 +80,4 @@ services:
 ## Tous les tags existent en : 
 - xxx (Pour la version JVM)
 - xxx-native (Pour la version native)
+- xxx étant latest ou la version de release (v1.1.1)
