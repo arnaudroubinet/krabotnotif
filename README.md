@@ -78,9 +78,5 @@ services:
 # Typologie des tags:
 
 ## Tous les tags existent en : 
-- xxx-jvm
-- xxx-native
-
-## Types d'images :
-- latest-xxx : l'image de la dernière release
-- 1.2.3-xxx : l'image pour une release définie
+- xxx (Pour la version JVM)
+- xxx-native (Pour la version native)
