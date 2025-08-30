@@ -117,7 +117,3 @@ jobs:
           template: '@/contrib/sarif.tpl'
           output: 'trivy-results-native.sarif'
           severity: 'CRITICAL,HIGH'
-
-      - name: Update personal instance by calling his update webhook
-        run: |
-          curl -X POST "${{ secrets.INSTANCE_TO_UPDATE_WEBHOOK }}"
