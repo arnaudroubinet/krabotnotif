@@ -1,15 +1,6 @@
 package arn.roub.krabot.utils.elements;
 
-public final class Author {
-    private final String name;
-    private final String url;
-    private final String iconUrl;
-
-    public Author(String name, String url, String iconUrl) {
-        this.name = name;
-        this.url = url;
-        this.iconUrl = iconUrl;
-    }
+public record Author(String name, String url, String iconUrl) {
 
     public String getName() {
         return name;
@@ -21,29 +12,6 @@ public final class Author {
 
     public String getIconUrl() {
         return iconUrl;
-    }
-
-    @Override
-    public String toString() {
-        return "Author{" +
-                "name='" + name + '\'' +
-                ", url='" + url + '\'' +
-                ", iconUrl='" + iconUrl + '\'' +
-                '}';
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof Author author)) return false;
-        return java.util.Objects.equals(name, author.name) && 
-               java.util.Objects.equals(url, author.url) && 
-               java.util.Objects.equals(iconUrl, author.iconUrl);
-    }
-
-    @Override
-    public int hashCode() {
-        return java.util.Objects.hash(name, url, iconUrl);
     }
 
     public static AuthorBuilder builder() {
