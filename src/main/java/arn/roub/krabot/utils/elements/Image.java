@@ -1,13 +1,25 @@
 package arn.roub.krabot.utils.elements;
 
-import lombok.Builder;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.ToString;
-@Getter
-@Builder
-@ToString
-@EqualsAndHashCode
-public final class Image {
-    private final String url;
+public record Image(String url) {
+
+    public String getUrl() {
+        return url;
+    }
+
+    public static ImageBuilder builder() {
+        return new ImageBuilder();
+    }
+
+    public static class ImageBuilder {
+        private String url;
+
+        public ImageBuilder url(String url) {
+            this.url = url;
+            return this;
+        }
+
+        public Image build() {
+            return new Image(url);
+        }
+    }
 }

@@ -18,7 +18,6 @@
         <surefire-plugin.version>3.5.4</surefire-plugin.version>
 
         <jsoup.version>1.21.2</jsoup.version>
-        <lombok.version>1.18.40</lombok.version>
     </properties>
 
     <dependencyManagement>
@@ -77,12 +76,6 @@
             <groupId>io.rest-assured</groupId>
             <artifactId>rest-assured</artifactId>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <version>${lombok.version}</version>
-            <scope>provided</scope>
         </dependency>
     </dependencies>
 

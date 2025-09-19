@@ -4,19 +4,20 @@ import arn.roub.krabot.errors.ExceptionNotificationService;
 import arn.roub.krabot.scrapper.ScrappingService;
 import io.quarkus.scheduler.Scheduled;
 import jakarta.enterprise.context.ApplicationScoped;
-import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @ApplicationScoped
-@AllArgsConstructor
 public class ScrapAndNotifyJob {
 
     private final ScrappingService scrappingService;
-
     private final ExceptionNotificationService exceptionNotificationService;
-
     private final Logger LOGGER = LoggerFactory.getLogger(ScrapAndNotifyJob.class);
+
+    public ScrapAndNotifyJob(ScrappingService scrappingService, ExceptionNotificationService exceptionNotificationService) {
+        this.scrappingService = scrappingService;
+        this.exceptionNotificationService = exceptionNotificationService;
+    }
 
     @Scheduled(every = "{scheduler.kraland.scraping.every}")
     public void execute() {

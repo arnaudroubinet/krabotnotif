@@ -1,6 +1,5 @@
 package arn.roub.krabot.utils;
 
-import lombok.Setter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,15 +30,11 @@ public class DiscordWebhook {
 
     private final Logger LOGGER = LoggerFactory.getLogger(DiscordWebhook.class);
     private final String url;
-    @Setter
     private String content;
-    @Setter
     private String username;
-    @Setter
     private String avatarUrl;
 
     private OffsetDateTime resetAfter;
-    @Setter
     private boolean tts;
     /**
      * Constructs a new DiscordWebhook instance
@@ -48,6 +43,22 @@ public class DiscordWebhook {
      */
     public DiscordWebhook(String url) {
         this.url = url;
+    }
+
+    public void setContent(String content) {
+        this.content = content;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public void setAvatarUrl(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
+    }
+
+    public void setTts(boolean tts) {
+        this.tts = tts;
     }
 
     public void execute() throws IOException {
