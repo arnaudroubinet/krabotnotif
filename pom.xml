@@ -104,6 +104,13 @@
                         <includeOnlyProperty>^git.dirty$</includeOnlyProperty>
                     </includeOnlyProperties>
                     <commitIdGenerationMode>full</commitIdGenerationMode>
+                    <gitDescribe>
+                        <skip>false</skip>
+                        <always>true</always>
+                        <abbrev>7</abbrev>
+                        <dirty>-dirty</dirty>
+                        <tags>true</tags>
+                    </gitDescribe>
                 </configuration>
             </plugin>
             <plugin>
