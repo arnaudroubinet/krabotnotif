@@ -26,11 +26,11 @@ class CurrentStateTest {
     void testCurrentVersionFormat() {
         String version = currentState.getCurrentVersion();
         System.out.println("Current version: " + version);
-        // Version should either be a git tag (starting with v), a commit hash, or the fallback format
+        // Version should either be a git tag (vX.Y.Z format), a commit hash, or the fallback format
+        // Malformed versions like v.X.Y.Z should NOT be accepted
         assertTrue(
-                version.startsWith("v") || 
-                version.matches("[0-9a-f]{7}") || 
-                version.startsWith("v.") ||
+                version.matches("^v[0-9]+\\.[0-9]+\\.[0-9]+$") ||  // Semantic version like v2.0.4
+                version.matches("^[0-9a-f]{7,}$") ||                // Commit hash
                 version.equals("Unknown"),
                 "Version format should be valid: " + version
         );
