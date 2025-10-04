@@ -115,8 +115,7 @@ public class DiscordWebhook {
                                 LOGGER.debug("{} : {}", X_RATE_LIMIT_RESET, reset);
                                 LOGGER.debug("{} : {}", X_RATE_LIMIT_RESET_AFTER, resetAfterHeader);
                                 LOGGER.debug("{} : {}", X_RATE_LIMIT_BUCKET, bucket);
-                                OffsetDateTime resetTime = OffsetDateTime.ofInstant(Instant.ofEpochSecond(Long.parseLong(reset)), ZoneOffset.systemDefault());
-                                LOGGER.debug("Rate limit will be reset after : {}", resetTime);
+                                LOGGER.debug("Rate limit will be reset after : {}", OffsetDateTime.ofInstant(Instant.ofEpochSecond(Long.parseLong(reset)), ZoneOffset.systemDefault()));
                             }
                         }
                 );
