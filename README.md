@@ -78,6 +78,7 @@ Le processus de release est divisé en deux workflows GitHub Actions :
    - Build les images Docker multi-architecture (JVM et native)
    - Pousse les images vers DockerHub avec les tags `latest` et la version
    - Exécute les scans de sécurité Trivy
+   - Crée une release GitHub avec notes de version auto-générées
 
 ### Comment créer une nouvelle release :
 
