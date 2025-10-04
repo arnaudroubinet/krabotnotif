@@ -143,7 +143,6 @@ public class ScrappingService {
                 discordWebhook.setAvatarUrl(avatar);
                 discordWebhook.setUsername(username);
                 discordWebhook.setContent(message);
-                discordWebhook.setTts(false);
                 discordWebhook.execute();
             }
         } catch (PostponedNotificationException ex) {
@@ -159,15 +158,12 @@ public class ScrappingService {
             discordWebhook.setAvatarUrl(avatar);
             discordWebhook.setUsername(username);
             discordWebhook.setContent(firstMessage);
-            discordWebhook.setTts(false);
             discordWebhook.execute();
         } catch (PostponedNotificationException ex) {
             // Do nothing
         } catch (Exception e) {
             throw new RuntimeException(e);
-
         }
-
     }
 
 }

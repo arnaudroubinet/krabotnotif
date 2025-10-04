@@ -1,5 +1,5 @@
 package arn.roub.service;
 
-public record CurrentStateDto(Integer nbKramail, Boolean hasNotification, String currentVersion, String latestVersion) {
+public record CurrentStateDto(int nbKramail, boolean hasNotification, String currentVersion, String latestVersion) {
     
 }

@@ -35,7 +35,6 @@ public class DiscordWebhook {
     private String avatarUrl;
 
     private OffsetDateTime resetAfter;
-    private boolean tts;
     /**
      * Constructs a new DiscordWebhook instance
      *
@@ -57,10 +56,6 @@ public class DiscordWebhook {
         this.avatarUrl = avatarUrl;
     }
 
-    public void setTts(boolean tts) {
-        this.tts = tts;
-    }
-
     public void execute() throws IOException {
 
         if (resetAfter != null && resetAfter.isAfter(OffsetDateTime.now())) {
@@ -79,7 +74,6 @@ public class DiscordWebhook {
         json.put("content", this.content);
         json.put("username", this.username);
         json.put("avatar_url", this.avatarUrl);
-        json.put("tts", this.tts);
 
         URL url = URI.create(this.url).toURL();
         HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();

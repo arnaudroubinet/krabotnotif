@@ -5,10 +5,6 @@ import arn.roub.krabot.utils.PostponedNotificationException;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
-
-import java.io.PrintWriter;
-import java.io.StringWriter;
-
 @ApplicationScoped
 public class ExceptionNotificationService {
 
@@ -30,23 +26,16 @@ public class ExceptionNotificationService {
 
     public void exceptionManagement(Throwable ex) {
         try {
-            StringWriter sw = new StringWriter();
-            PrintWriter pw = new PrintWriter(sw);
-            ex.printStackTrace(pw);
             DiscordWebhook discordWebhook = new DiscordWebhook(hookUrl);
             discordWebhook.setAvatarUrl(avatar);
             discordWebhook.setUsername(username);
             discordWebhook.setContent(prefixMessage +" "+ ex.getMessage());
-            discordWebhook.setTts(false);
             discordWebhook.execute();
-
         } catch (PostponedNotificationException pnex) {
             //Do nothing
         } catch (Exception e) {
             throw new RuntimeException(e);
-
         }
-
     }
 
 }
