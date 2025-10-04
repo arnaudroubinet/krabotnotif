@@ -1,5 +1,10 @@
 name: Increment Version and Tag
 
+# ⚠️ IMPORTANT: This workflow uses GITHUB_TOKEN to push tags, which does NOT trigger other workflows.
+# The release.yml workflow will NOT be automatically triggered after this workflow completes.
+# This is a GitHub Actions security feature to prevent recursive workflow executions.
+# See README.md for solutions on how to trigger the release workflow after running this one.
+
 on:
   workflow_dispatch:
     inputs:
@@ -130,3 +135,12 @@ jobs:
           git push origin "$NEW_TAG"
           
           echo "✅ Created and pushed tag: $NEW_TAG"
+          echo ""
+          echo "⚠️ IMPORTANT: This tag push uses GITHUB_TOKEN, which will NOT trigger the release workflow."
+          echo "This is a GitHub Actions security feature to prevent recursive workflow executions."
+          echo "To trigger the release workflow, you need to either:"
+          echo "  1. Manually run the 'Release' workflow from the Actions tab"
+          echo "  2. Use a Personal Access Token (PAT) instead of GITHUB_TOKEN"
+          echo "  3. Create and push the tag manually from your local machine"
+          echo ""
+          echo "See README.md for more details."

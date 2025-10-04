@@ -86,7 +86,31 @@ Le processus de release est divisé en deux workflows GitHub Actions :
 2. Sélectionner le workflow "Increment Version and Tag"
 3. Cliquer sur "Run workflow"
 4. Choisir le type d'incrémentation (patch par défaut)
-5. Le workflow créera automatiquement le tag qui déclenchera le workflow de release
+5. Le workflow créera le tag mais **ne déclenchera pas automatiquement** le workflow de release
+
+### ⚠️ Limitation importante : Le workflow de release ne se déclenche pas automatiquement
+
+**Pourquoi ?**
+
+Lorsque le workflow "Increment Version and Tag" pousse un tag en utilisant le `GITHUB_TOKEN` par défaut, GitHub Actions **empêche volontairement** le déclenchement d'autres workflows. C'est une mesure de sécurité pour éviter les boucles infinies de workflows qui se déclencheraient mutuellement.
+
+**Solutions :**
+
+1. **Solution recommandée : Déclencher manuellement le workflow de release**
+   - Après l'exécution du workflow "Increment Version and Tag"
+   - Aller dans l'onglet "Actions"
+   - Sélectionner le workflow "Release"
+   - Cliquer sur "Run workflow" et sélectionner le tag créé
+
+2. **Solution alternative : Utiliser un Personal Access Token (PAT)**
+   - Créer un PAT avec les permissions `repo` et `workflow`
+   - L'ajouter comme secret dans le repository (ex: `PAT_TOKEN`)
+   - Modifier le workflow `increment-version.yml` pour utiliser ce token à la place du `GITHUB_TOKEN`
+   - **Attention** : Cette solution nécessite une gestion plus complexe des tokens et peut poser des problèmes de sécurité
+
+3. **Solution alternative : Créer le tag manuellement**
+   - Créer et pousser le tag depuis votre machine locale
+   - Le workflow de release se déclenchera automatiquement (car ce n'est pas un workflow qui pousse le tag)
 
 # Docker compose
 Le fichier docker compose suivant est fait pour s'executer sous portainer en utilisant son système de variable d'environnement. remplacez stack.env par votre fichier de variables ou passer lui directement les variables en remplaçant "env_file:" par "environment: "
