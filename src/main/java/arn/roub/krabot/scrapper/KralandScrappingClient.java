@@ -70,9 +70,7 @@ public class KralandScrappingClient {
             var report = response.body().contains("report2.gif");
             var kramails = new ArrayList<Kramail>();
 
-            // Convertir la chaîne HTML en InputStream);
             Document document = Jsoup.parse(response.body());
-            // Récupérer toutes les balises <img>
             Elements imgNodes = document.select("img");
 
             imgNodes.forEach(element -> {
