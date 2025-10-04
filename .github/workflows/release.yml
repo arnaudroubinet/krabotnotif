@@ -4,7 +4,7 @@ on:
     tags:
       - 'v*'
 permissions:
-  contents: read 
+  contents: write
   security-events: write
   actions: read
 jobs:
@@ -91,3 +91,19 @@ jobs:
           template: '@/contrib/sarif.tpl'
           output: 'trivy-results-native.sarif'
           severity: 'CRITICAL,HIGH'
+
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG_NAME="${GITHUB_REF#refs/tags/}"
+
+          # Check if release already exists
+          if gh release view "$TAG_NAME" &>/dev/null; then
+            echo "Release $TAG_NAME already exists, skipping creation"
+          else
+            echo "Creating release $TAG_NAME"
+            gh release create "$TAG_NAME" \
+              --title "Release $TAG_NAME" \
+              --generate-notes
+          fi
