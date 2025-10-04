@@ -121,7 +121,7 @@ public class ScrappingService {
     public void loadGithubAndSendNotificationIfWeHaveNewRelease(int errorcounter) {
         try {
             String tag = githubScrappingClient.getLastReleaseTag();
-            if(!tag.equals(currentState.getLatestVersion())) {
+            if (!tag.equals(currentState.getLatestVersion())) {
                 currentState.setLatestVersion(tag);
                 String message = releaseMessage + " : https://github.com/arnaudroubinet/krabotnotif/releases/latest";
                 sendNotificationIfNotificationFlagIsTrue(message, new AtomicBoolean(false));
@@ -143,7 +143,6 @@ public class ScrappingService {
                 discordWebhook.setAvatarUrl(avatar);
                 discordWebhook.setUsername(username);
                 discordWebhook.setContent(message);
-                discordWebhook.setTts(false);
                 discordWebhook.execute();
             }
         } catch (PostponedNotificationException ex) {
@@ -159,15 +158,12 @@ public class ScrappingService {
             discordWebhook.setAvatarUrl(avatar);
             discordWebhook.setUsername(username);
             discordWebhook.setContent(firstMessage);
-            discordWebhook.setTts(false);
             discordWebhook.execute();
         } catch (PostponedNotificationException ex) {
             // Do nothing
         } catch (Exception e) {
             throw new RuntimeException(e);
-
         }
-
     }
 
 }

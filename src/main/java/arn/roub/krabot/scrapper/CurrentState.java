@@ -6,6 +6,11 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 @ApplicationScoped
 public class CurrentState {
 
+    private int nbkramail;
+    private boolean hasNotification;
+    private final String currentVersion;
+    private String latestVersion;
+
     public CurrentState(@ConfigProperty(name = "quarkus.application.version", defaultValue = "Unknown") String version) {
         this.currentVersion = "v"+version;
         this.nbkramail = 0;
@@ -13,33 +18,24 @@ public class CurrentState {
         this.latestVersion = "Unknown";
     }
 
-    private Integer nbkramail;
-    private Boolean hasNotification;
-    private String currentVersion;
-    private String latestVersion;
-
-    public Integer getNbkramail() {
+    public int getNbkramail() {
         return nbkramail;
     }
 
-    public void setNbkramail(Integer nbkramail) {
+    public void setNbkramail(int nbkramail) {
         this.nbkramail = nbkramail;
     }
 
-    public Boolean getHasNotification() {
+    public boolean getHasNotification() {
         return hasNotification;
     }
 
-    public void setHasNotification(Boolean hasNotification) {
+    public void setHasNotification(boolean hasNotification) {
         this.hasNotification = hasNotification;
     }
 
     public String getCurrentVersion() {
         return currentVersion;
-    }
-
-    public void setCurrentVersion(String currentVersion) {
-        this.currentVersion = currentVersion;
     }
 
     public String getLatestVersion() {

@@ -14,11 +14,7 @@ class LombokReplacementTest {
 
     @Test
     void testKramailBuilder() {
-        Kramail kramail = Kramail.builder()
-                .id("123")
-                .title("Test Title")
-                .originator("Test Originator")
-                .build();
+        Kramail kramail = new Kramail("123", "Test Title", "Test Originator");
 
         assertEquals("123", kramail.id());
         assertEquals("Test Title", kramail.title());
@@ -98,14 +94,12 @@ class LombokReplacementTest {
         webhook.setContent("Test Content");
         webhook.setUsername("Test User");
         webhook.setAvatarUrl("http://example.com/avatar.png");
-        webhook.setTts(true);
 
         // We can't test getters since they don't exist, but we can verify the setters don't throw exceptions
         assertDoesNotThrow(() -> {
             webhook.setContent("New Content");
             webhook.setUsername("New User");
             webhook.setAvatarUrl("http://example.com/new-avatar.png");
-            webhook.setTts(false);
         });
     }
 
