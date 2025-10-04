@@ -14,11 +14,7 @@ class LombokReplacementTest {
 
     @Test
     void testKramailBuilder() {
-        Kramail kramail = Kramail.builder()
-                .id("123")
-                .title("Test Title")
-                .originator("Test Originator")
-                .build();
+        Kramail kramail = new Kramail("123", "Test Title", "Test Originator");
 
         assertEquals("123", kramail.id());
         assertEquals("Test Title", kramail.title());

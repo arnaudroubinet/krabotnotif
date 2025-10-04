@@ -71,7 +71,7 @@ public class DiscordWebhook {
         }
 
         if (this.content == null) {
-            throw new IllegalArgumentException("Set content or add at least one EmbedObject");
+            throw new IllegalArgumentException("Content must be set");
         }
 
         JSONObject json = new JSONObject();
@@ -83,13 +83,13 @@ public class DiscordWebhook {
 
         URL url = URI.create(this.url).toURL();
         HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
-        connection.addRequestProperty("Content-Type", "application/json;  charset=ISO-8859-1'");
+        connection.addRequestProperty("Content-Type", "application/json; charset=UTF-8");
         connection.addRequestProperty("User-Agent", "Kraland web hook");
         connection.setDoOutput(true);
         connection.setRequestMethod("POST");
 
         OutputStream stream = connection.getOutputStream();
-        stream.write(json.toString().getBytes(StandardCharsets.ISO_8859_1));
+        stream.write(json.toString().getBytes(StandardCharsets.UTF_8));
         stream.flush();
         stream.close();
 
@@ -102,21 +102,27 @@ public class DiscordWebhook {
         Optional.ofNullable(connection.getHeaderField(X_RATE_LIMIT_REMAINING.toLowerCase()))
                 .map(Long::valueOf)
                 .ifPresent(remaining -> {
+                            String limit = connection.getHeaderField(X_RATE_LIMIT_LIMIT.toLowerCase());
+                            String reset = connection.getHeaderField(X_RATE_LIMIT_RESET.toLowerCase());
+                            String resetAfterHeader = connection.getHeaderField(X_RATE_LIMIT_RESET_AFTER.toLowerCase());
+                            String bucket = connection.getHeaderField(X_RATE_LIMIT_BUCKET.toLowerCase());
+                            
                             if (remaining <= 0) {
-                                LOGGER.warn("{} : {}", X_RATE_LIMIT_LIMIT, connection.getHeaderField(X_RATE_LIMIT_LIMIT.toLowerCase()));
+                                LOGGER.warn("{} : {}", X_RATE_LIMIT_LIMIT, limit);
                                 LOGGER.warn("{} : {}", X_RATE_LIMIT_REMAINING, remaining);
-                                LOGGER.warn("{} : {}", X_RATE_LIMIT_RESET, connection.getHeaderField(X_RATE_LIMIT_RESET.toLowerCase()));
-                                LOGGER.warn("{} : {}", X_RATE_LIMIT_RESET_AFTER, connection.getHeaderField(X_RATE_LIMIT_RESET_AFTER.toLowerCase()));
-                                LOGGER.warn("{} : {}", X_RATE_LIMIT_BUCKET, connection.getHeaderField(X_RATE_LIMIT_BUCKET.toLowerCase()));
-                                resetAfter = OffsetDateTime.ofInstant(Instant.ofEpochSecond(Long.parseLong(connection.getHeaderField(X_RATE_LIMIT_RESET.toLowerCase()))), ZoneOffset.systemDefault());
+                                LOGGER.warn("{} : {}", X_RATE_LIMIT_RESET, reset);
+                                LOGGER.warn("{} : {}", X_RATE_LIMIT_RESET_AFTER, resetAfterHeader);
+                                LOGGER.warn("{} : {}", X_RATE_LIMIT_BUCKET, bucket);
+                                resetAfter = OffsetDateTime.ofInstant(Instant.ofEpochSecond(Long.parseLong(reset)), ZoneOffset.systemDefault());
                                 LOGGER.warn("Rate limit will be reset after : {}", resetAfter);
                             } else {
-                                LOGGER.debug("{} : {}", X_RATE_LIMIT_LIMIT, connection.getHeaderField(X_RATE_LIMIT_LIMIT.toLowerCase()));
+                                LOGGER.debug("{} : {}", X_RATE_LIMIT_LIMIT, limit);
                                 LOGGER.debug("{} : {}", X_RATE_LIMIT_REMAINING, remaining);
-                                LOGGER.debug("{} : {}", X_RATE_LIMIT_RESET, connection.getHeaderField(X_RATE_LIMIT_RESET.toLowerCase()));
-                                LOGGER.debug("{} : {}", X_RATE_LIMIT_RESET_AFTER, connection.getHeaderField(X_RATE_LIMIT_RESET_AFTER.toLowerCase()));
-                                LOGGER.debug("{} : {}", X_RATE_LIMIT_BUCKET, connection.getHeaderField(X_RATE_LIMIT_BUCKET.toLowerCase()));
-                                LOGGER.debug("Rate limit will be reset after : {}", OffsetDateTime.ofInstant(Instant.ofEpochSecond(Long.parseLong(connection.getHeaderField(X_RATE_LIMIT_RESET.toLowerCase()))), ZoneOffset.systemDefault()));
+                                LOGGER.debug("{} : {}", X_RATE_LIMIT_RESET, reset);
+                                LOGGER.debug("{} : {}", X_RATE_LIMIT_RESET_AFTER, resetAfterHeader);
+                                LOGGER.debug("{} : {}", X_RATE_LIMIT_BUCKET, bucket);
+                                OffsetDateTime resetTime = OffsetDateTime.ofInstant(Instant.ofEpochSecond(Long.parseLong(reset)), ZoneOffset.systemDefault());
+                                LOGGER.debug("Rate limit will be reset after : {}", resetTime);
                             }
                         }
                 );
@@ -151,7 +157,7 @@ public class DiscordWebhook {
                 if (val instanceof String) {
                     builder.append(quote(String.valueOf(val)));
                 } else if (val instanceof Integer) {
-                    builder.append(Integer.valueOf(String.valueOf(val)));
+                    builder.append(val);
                 } else if (val instanceof Boolean) {
                     builder.append(val);
                 } else if (val instanceof JSONObject) {
