@@ -69,6 +69,8 @@ Le processus de release est divisé en deux workflows GitHub Actions :
    - Permet de choisir le type d'incrémentation : `major`, `minor`, ou `patch`
    - Récupère la dernière version taguée
    - Incrémente automatiquement le numéro de version selon le type choisi
+   - Met à jour le fichier `pom.xml` avec la nouvelle version
+   - Commit et pousse le changement de version
    - Crée et pousse le nouveau tag (format `vX.Y.Z`)
 
 2. **Release** (`.github/workflows/release.yml`)

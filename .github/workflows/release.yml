@@ -20,15 +20,8 @@ jobs:
           distribution: 'zulu' # See 'Supported distributions' for available options
           java-version: '21'
 
-      - name : Set executable permissions for maven
+      - name: Set executable permissions for maven
         run: chmod +x ./mvnw
-
-      - name: Extract version from tag
-        id: extract_version
-        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-
-      - name: Update Maven Version
-        run: mvn versions:set -DnewVersion=${{ steps.extract_version.outputs.version }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -69,7 +62,7 @@ jobs:
       - name: Run Trivy vulnerability scanner for JVM image
         uses: aquasecurity/trivy-action@0.33.1
         with:
-          image-ref: 'arnaudroubinet/krabotnotif:${{ steps.extract_version.outputs.version }}'
+          image-ref: 'arnaudroubinet/krabotnotif:${GITHUB_REF#refs/tags/}'
           format: 'template'
           template: '@/contrib/sarif.tpl'
           output: 'trivy-results-jvm.sarif'
@@ -78,7 +71,7 @@ jobs:
       - name: Run Trivy vulnerability scanner for native image
         uses: aquasecurity/trivy-action@0.33.1
         with:
-          image-ref: 'arnaudroubinet/krabotnotif:${{ steps.extract_version.outputs.version }}-native'
+          image-ref: 'arnaudroubinet/krabotnotif:${GITHUB_REF#refs/tags/}-native'
           format: 'template'
           template: '@/contrib/sarif.tpl'
           output: 'trivy-results-native.sarif'
