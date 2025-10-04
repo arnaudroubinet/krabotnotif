@@ -86,7 +86,7 @@ public class KralandScrappingClient {
             });
 
 
-            return ScrappingResponse.of(kramails, report);
+            return new ScrappingResponse(kramails, report);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

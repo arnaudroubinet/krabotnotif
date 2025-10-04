@@ -121,7 +121,7 @@ public class ScrappingService {
     public void loadGithubAndSendNotificationIfWeHaveNewRelease(int errorcounter) {
         try {
             String tag = githubScrappingClient.getLastReleaseTag();
-            if(!tag.equals(currentState.getLatestVersion())) {
+            if (!tag.equals(currentState.getLatestVersion())) {
                 currentState.setLatestVersion(tag);
                 String message = releaseMessage + " : https://github.com/arnaudroubinet/krabotnotif/releases/latest";
                 sendNotificationIfNotificationFlagIsTrue(message, new AtomicBoolean(false));
