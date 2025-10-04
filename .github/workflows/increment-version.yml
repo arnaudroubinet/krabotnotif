@@ -37,8 +37,9 @@ jobs:
       - name: Get latest tag
         id: get_latest_tag
         run: |
-          # Get the latest tag, default to v0.0.0 if no tags exist
-          LATEST_TAG=$(git tag -l "v*" | sort -V | tail -n1)
+          # Get the latest tag that follows semantic versioning (vX.Y.Z format)
+          # Filter out malformed tags like v.X.Y.Z
+          LATEST_TAG=$(git tag -l "v*" | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n1)
           if [ -z "$LATEST_TAG" ]; then
             LATEST_TAG="v0.0.0"
           fi
@@ -54,6 +55,26 @@ jobs:
           
           # Split version into parts
           IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
+          
+          # Validate that version parts are not empty and are numeric
+          if [[ -z "$MAJOR" ]] || ! [[ "$MAJOR" =~ ^[0-9]+$ ]]; then
+            echo "Error: Invalid MAJOR version component: '$MAJOR'"
+            echo "LATEST_TAG was: $LATEST_TAG"
+            echo "VERSION after removing v: $VERSION"
+            exit 1
+          fi
+          if [[ -z "$MINOR" ]] || ! [[ "$MINOR" =~ ^[0-9]+$ ]]; then
+            echo "Error: Invalid MINOR version component: '$MINOR'"
+            echo "LATEST_TAG was: $LATEST_TAG"
+            echo "VERSION after removing v: $VERSION"
+            exit 1
+          fi
+          if [[ -z "$PATCH" ]] || ! [[ "$PATCH" =~ ^[0-9]+$ ]]; then
+            echo "Error: Invalid PATCH version component: '$PATCH'"
+            echo "LATEST_TAG was: $LATEST_TAG"
+            echo "VERSION after removing v: $VERSION"
+            exit 1
+          fi
           
           # Increment based on input
           case "${{ github.event.inputs.version_type }}" in
@@ -80,7 +101,7 @@ jobs:
           echo "New tag: $NEW_TAG"
 
       - name: Update Maven Version
-        run: ./mvnw versions:set -DnewVersion=${{ steps.calculate_version.outputs.new_version }}
+        run: ./mvnw versions:set -DnewVersion="${{ steps.calculate_version.outputs.new_version }}"
 
       - name: Commit version change
         run: |
