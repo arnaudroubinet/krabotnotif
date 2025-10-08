@@ -12,7 +12,6 @@ import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
 @ApplicationScoped
@@ -43,7 +42,7 @@ public class GithubScrappingClient {
 
     public String getLastReleaseTag() {
         try {
-            HttpResponse<String> response = httpClient.send(latestReleaseRequest, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            HttpResponse<String> response = httpClient.send(latestReleaseRequest, HttpResponse.BodyHandlers.ofString());
             JsonNode jsonNode = OBJECT_MAPPER.readTree(response.body());
             return jsonNode.get("tag_name").asText();
         } catch (Exception e) {

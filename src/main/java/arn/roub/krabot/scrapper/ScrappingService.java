@@ -142,7 +142,8 @@ public class ScrappingService {
                 discordWebhook.setTts(false);
                 discordWebhook.execute();
             }
-        } catch (PostponedNotificationException ex) {
+        } catch (PostponedNotificationException ignoredException) {
+            // Reset flag to allow retry - notification was postponed due to rate limiting
             flag.set(false);
         } catch (Exception e) {
             throw new DiscordNotificationException("Failed to send Discord notification", e);
@@ -157,8 +158,8 @@ public class ScrappingService {
             discordWebhook.setContent(discordConfig.firstMessage());
             discordWebhook.setTts(false);
             discordWebhook.execute();
-        } catch (PostponedNotificationException ex) {
-            // Do nothing
+        } catch (PostponedNotificationException ignoredException) {
+            // Notification postponed - this is acceptable during initialization
         } catch (Exception e) {
             throw new DiscordNotificationException("Failed to send initialization notification", e);
         }

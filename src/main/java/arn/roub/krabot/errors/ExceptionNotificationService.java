@@ -25,8 +25,8 @@ public class ExceptionNotificationService {
             discordWebhook.setTts(false);
             discordWebhook.execute();
 
-        } catch (PostponedNotificationException pnex) {
-            //Do nothing
+        } catch (PostponedNotificationException ignoredException) {
+            // Error notification postponed - acceptable as this is a best-effort notification
         } catch (Exception e) {
             throw new DiscordNotificationException("Failed to send error notification to Discord", e);
         }
