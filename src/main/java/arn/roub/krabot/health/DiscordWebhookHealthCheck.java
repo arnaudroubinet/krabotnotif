@@ -34,13 +34,12 @@ public class DiscordWebhookHealthCheck implements HealthCheck {
             connection.setReadTimeout(5000);
             
             int responseCode = connection.getResponseCode();
-            connection.disconnect();
             
-            if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_NO_CONTENT) {
-                return HealthCheckResponse.up("Discord webhook is reachable");
-            } else {
-                return HealthCheckResponse.down("Discord webhook returned status: " + responseCode);
-            }
+            return switch (responseCode) {
+                case HttpURLConnection.HTTP_OK, HttpURLConnection.HTTP_NO_CONTENT -> 
+                    HealthCheckResponse.up("Discord webhook is reachable");
+                default -> HealthCheckResponse.down("Discord webhook returned status: " + responseCode);
+            };
         } catch (Exception e) {
             return HealthCheckResponse.down("Discord webhook unreachable: " + e.getMessage());
         }

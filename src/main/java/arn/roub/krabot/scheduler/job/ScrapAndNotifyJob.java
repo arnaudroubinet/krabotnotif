@@ -22,7 +22,7 @@ public class ScrapAndNotifyJob {
     @Scheduled(every = "{scheduler.kraland.scraping.every}")
     public void execute() {
         try {
-            scrappingService.loadKiAndSendNotificationIfWeHaveReport();
+            scrappingService.checkKralandAndNotify();
         } catch (RuntimeException runtimeException) {
             try {
                 LOGGER.error("Error occurred during the scrap or the notification post. {}", runtimeException.getMessage());

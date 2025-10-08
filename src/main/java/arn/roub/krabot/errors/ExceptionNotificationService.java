@@ -3,6 +3,7 @@ package arn.roub.krabot.errors;
 import arn.roub.krabot.config.DiscordConfig;
 import arn.roub.krabot.exception.DiscordNotificationException;
 import arn.roub.krabot.utils.DiscordWebhook;
+import arn.roub.krabot.utils.DiscordWebhookFactory;
 import arn.roub.krabot.utils.PostponedNotificationException;
 import jakarta.enterprise.context.ApplicationScoped;
 
@@ -11,17 +12,19 @@ import jakarta.enterprise.context.ApplicationScoped;
 public class ExceptionNotificationService {
 
     private final DiscordConfig discordConfig;
+    private final DiscordWebhookFactory webhookFactory;
 
-    public ExceptionNotificationService(DiscordConfig discordConfig) {
+    public ExceptionNotificationService(DiscordConfig discordConfig, DiscordWebhookFactory webhookFactory) {
         this.discordConfig = discordConfig;
+        this.webhookFactory = webhookFactory;
     }
 
     public void exceptionManagement(Throwable ex) {
         try {
-            DiscordWebhook discordWebhook = new DiscordWebhook(discordConfig.url());
+            DiscordWebhook discordWebhook = webhookFactory.create(discordConfig.url());
             discordWebhook.setAvatarUrl(discordConfig.avatarUrl());
             discordWebhook.setUsername(discordConfig.username());
-            discordWebhook.setContent(discordConfig.errorPrefixMessage() +" "+ ex.getMessage());
+            discordWebhook.setContent("%s %s".formatted(discordConfig.errorPrefixMessage(), ex.getMessage()));
             discordWebhook.setTts(false);
             discordWebhook.execute();
 

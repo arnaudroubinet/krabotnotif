@@ -79,7 +79,7 @@ class ScrappingServiceTest {
                 .thenReturn(new ScrappingResponse(kramails, false));
 
         // When
-        scrappingService.loadKiAndSendNotificationIfWeHaveReport();
+        scrappingService.checkKralandAndNotify();
 
         // Then
         assertEquals(2, currentState.getNbkramail());
@@ -97,13 +97,13 @@ class ScrappingServiceTest {
         );
         when(kralandScrappingClient.hasNotification(anyString(), anyString()))
                 .thenReturn(new ScrappingResponse(initial, false));
-        scrappingService.loadKiAndSendNotificationIfWeHaveReport();
+        scrappingService.checkKralandAndNotify();
 
         // When - Second call with only 1 kramail
         List<Kramail> reduced = List.of(new Kramail("1", "Title1", "Sender1"));
         when(kralandScrappingClient.hasNotification(anyString(), anyString()))
                 .thenReturn(new ScrappingResponse(reduced, false));
-        scrappingService.loadKiAndSendNotificationIfWeHaveReport();
+        scrappingService.checkKralandAndNotify();
 
         // Then
         assertEquals(1, currentState.getNbkramail());
@@ -121,7 +121,7 @@ class ScrappingServiceTest {
                 .thenReturn(new ScrappingResponse(kramails, true));
 
         // When - This would fail if real HTTP calls were made
-        assertDoesNotThrow(() -> scrappingService.loadKiAndSendNotificationIfWeHaveReport());
+        assertDoesNotThrow(() -> scrappingService.checkKralandAndNotify());
 
         // Then - Verify webhook was "called" via mock
         verify(webhookFactory, atLeastOnce()).create(discordConfig.url());

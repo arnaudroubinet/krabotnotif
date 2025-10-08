@@ -28,13 +28,11 @@ public class KralandHealthCheck implements HealthCheck {
             connection.setReadTimeout(5000);
             
             int responseCode = connection.getResponseCode();
-            connection.disconnect();
             
-            if (responseCode == HttpURLConnection.HTTP_OK) {
-                return HealthCheckResponse.up("Kraland website is reachable");
-            } else {
-                return HealthCheckResponse.down("Kraland returned status: " + responseCode);
-            }
+            return switch (responseCode) {
+                case HttpURLConnection.HTTP_OK -> HealthCheckResponse.up("Kraland website is reachable");
+                default -> HealthCheckResponse.down("Kraland returned status: " + responseCode);
+            };
         } catch (Exception e) {
             return HealthCheckResponse.down("Kraland unreachable: " + e.getMessage());
         }

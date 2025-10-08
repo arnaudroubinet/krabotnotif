@@ -54,7 +54,7 @@ public class ScrappingService {
     void initialize() {
         try {
             this.currentState.setLatestVersion(githubScrappingClient.getLastReleaseTag());
-            initializeService();
+            sendStartupNotification();
         } catch (Exception e) {
             LOGGER.error("Failed to initialize service. GitHub release check or Discord notification failed.", e);
             // Application continues - initialization failure is not fatal
@@ -63,15 +63,15 @@ public class ScrappingService {
 
     @PreDestroy
     void destroy() {
-        sendNotificationIfNotificationFlagIsTrue(discordConfig.lastMessage(), new AtomicBoolean(false));
+        sendNotification(discordConfig.lastMessage(), new AtomicBoolean(false));
     }
 
-    public void loadKiAndSendNotificationIfWeHaveReport() {
+    public void checkKralandAndNotify() {
         retryOnFailure(() -> {
             ScrappingResponse response = kralandScrappingClient.hasNotification(kiUser, kiPassword);
 
             if (response.hasNotification()) {
-                sendNotificationIfNotificationFlagIsTrue(discordConfig.messageNotification(), reportNotificationIsAlreadySentFlag);
+                sendNotification(discordConfig.messageNotification(), reportNotificationIsAlreadySentFlag);
                 currentState.setHasNotification(true);
             } else {
                 currentState.setHasNotification(false);
@@ -87,7 +87,7 @@ public class ScrappingService {
                                 .replace(PLACEHOLDER_TITLE, kramail.title())
                                 .replace(PLACEHOLDER_ORIGINATOR, kramail.originator());
 
-                        sendNotificationIfNotificationFlagIsTrue(message, isAlreadySent);
+                        sendNotification(message, isAlreadySent);
                     }
                     kramailNotifAlreadySent.put(kramail.id(), isAlreadySent);
                 });
@@ -106,13 +106,14 @@ public class ScrappingService {
     }
 
 
-    public void loadGithubAndSendNotificationIfWeHaveNewRelease() {
+    public void checkGithubReleaseAndNotify() {
         retryOnFailure(() -> {
             String tag = githubScrappingClient.getLastReleaseTag();
             if(!tag.equals(currentState.getLatestVersion())) {
                 currentState.setLatestVersion(tag);
-                String message = discordConfig.release() + " : https://github.com/arnaudroubinet/krabotnotif/releases/latest";
-                sendNotificationIfNotificationFlagIsTrue(message, new AtomicBoolean(false));
+                String message = "%s: https://github.com/arnaudroubinet/krabotnotif/releases/latest"
+                        .formatted(discordConfig.release());
+                sendNotification(message, new AtomicBoolean(false));
             }
         });
     }
@@ -131,7 +132,7 @@ public class ScrappingService {
         }
     }
 
-    private void sendNotificationIfNotificationFlagIsTrue(String message, AtomicBoolean flag) {
+    private void sendNotification(String message, AtomicBoolean flag) {
         try {
             if (!flag.get()) {
                 flag.set(true);
@@ -150,7 +151,7 @@ public class ScrappingService {
         }
     }
 
-    private void initializeService() {
+    private void sendStartupNotification() {
         try {
             DiscordWebhook discordWebhook = webhookFactory.create(discordConfig.url());
             discordWebhook.setAvatarUrl(discordConfig.avatarUrl());

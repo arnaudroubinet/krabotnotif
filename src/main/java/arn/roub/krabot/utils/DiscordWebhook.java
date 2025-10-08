@@ -21,14 +21,13 @@ import java.util.Optional;
  * Class used to execute Discord Webhooks with low effort
  */
 public class DiscordWebhook {
+    private static final Logger LOGGER = LoggerFactory.getLogger(DiscordWebhook.class);
     private static final String X_RATE_LIMIT_LIMIT = "X-RateLimit-Limit";
     private static final String X_RATE_LIMIT_REMAINING = "X-RateLimit-Remaining";
     private static final String X_RATE_LIMIT_RESET = "X-RateLimit-Reset";
     private static final String X_RATE_LIMIT_RESET_AFTER = "X-RateLimit-Reset-After";
     private static final String X_RATE_LIMIT_BUCKET = "X-RateLimit-Bucket";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-
-    private final Logger LOGGER = LoggerFactory.getLogger(DiscordWebhook.class);
     private final String url;
     private String content;
     private String username;
@@ -63,16 +62,15 @@ public class DiscordWebhook {
     }
 
     public void execute() throws IOException {
-
         if (resetAfter != null && resetAfter.isAfter(OffsetDateTime.now())) {
-            LOGGER.warn("Discord RateLimit reach and will be reset after {}. The notification sent is delay.", resetAfter);
+            LOGGER.warn("Discord RateLimit reached and will be reset after {}. The notification is delayed.", resetAfter);
             throw new PostponedNotificationException();
         } else {
             resetAfter = null;
         }
 
         if (this.content == null) {
-            throw new IllegalArgumentException("Set content or add at least one EmbedObject");
+            throw new IllegalArgumentException("Content must be set before execution");
         }
 
         Map<String, Object> payload = new HashMap<>();
@@ -102,29 +100,46 @@ public class DiscordWebhook {
         Optional.ofNullable(connection.getHeaderField(X_RATE_LIMIT_REMAINING.toLowerCase()))
                 .map(Long::valueOf)
                 .ifPresent(remaining -> {
-                            if (remaining <= 0) {
-                                LOGGER.warn("{} : {}", X_RATE_LIMIT_LIMIT, connection.getHeaderField(X_RATE_LIMIT_LIMIT.toLowerCase()));
-                                LOGGER.warn("{} : {}", X_RATE_LIMIT_REMAINING, remaining);
-                                LOGGER.warn("{} : {}", X_RATE_LIMIT_RESET, connection.getHeaderField(X_RATE_LIMIT_RESET.toLowerCase()));
-                                LOGGER.warn("{} : {}", X_RATE_LIMIT_RESET_AFTER, connection.getHeaderField(X_RATE_LIMIT_RESET_AFTER.toLowerCase()));
-                                LOGGER.warn("{} : {}", X_RATE_LIMIT_BUCKET, connection.getHeaderField(X_RATE_LIMIT_BUCKET.toLowerCase()));
-                                resetAfter = OffsetDateTime.ofInstant(Instant.ofEpochSecond(Long.parseLong(connection.getHeaderField(X_RATE_LIMIT_RESET.toLowerCase()))), ZoneOffset.systemDefault());
-                                LOGGER.warn("Rate limit will be reset after : {}", resetAfter);
-                            } else {
-                                LOGGER.debug("{} : {}", X_RATE_LIMIT_LIMIT, connection.getHeaderField(X_RATE_LIMIT_LIMIT.toLowerCase()));
-                                LOGGER.debug("{} : {}", X_RATE_LIMIT_REMAINING, remaining);
-                                LOGGER.debug("{} : {}", X_RATE_LIMIT_RESET, connection.getHeaderField(X_RATE_LIMIT_RESET.toLowerCase()));
-                                LOGGER.debug("{} : {}", X_RATE_LIMIT_RESET_AFTER, connection.getHeaderField(X_RATE_LIMIT_RESET_AFTER.toLowerCase()));
-                                LOGGER.debug("{} : {}", X_RATE_LIMIT_BUCKET, connection.getHeaderField(X_RATE_LIMIT_BUCKET.toLowerCase()));
-                                LOGGER.debug("Rate limit will be reset after : {}", OffsetDateTime.ofInstant(Instant.ofEpochSecond(Long.parseLong(connection.getHeaderField(X_RATE_LIMIT_RESET.toLowerCase()))), ZoneOffset.systemDefault()));
-                            }
-                        }
-                );
+                    boolean isRateLimited = remaining <= 0;
+                    
+                    logRateLimitInfo(connection, remaining, isRateLimited);
+                    
+                    if (isRateLimited) {
+                        resetAfter = OffsetDateTime.ofInstant(
+                            Instant.ofEpochSecond(Long.parseLong(connection.getHeaderField(X_RATE_LIMIT_RESET.toLowerCase()))), 
+                            ZoneOffset.systemDefault()
+                        );
+                        LOGGER.warn("Rate limit will be reset after: {}", resetAfter);
+                    }
+                });
 
         try (var inputStream = connection.getInputStream()) {
             inputStream.close();
         } finally {
             connection.disconnect();
+        }
+    }
+    
+    private void logRateLimitInfo(HttpsURLConnection connection, long remaining, boolean isRateLimited) {
+        String limit = connection.getHeaderField(X_RATE_LIMIT_LIMIT.toLowerCase());
+        String reset = connection.getHeaderField(X_RATE_LIMIT_RESET.toLowerCase());
+        String resetAfterHeader = connection.getHeaderField(X_RATE_LIMIT_RESET_AFTER.toLowerCase());
+        String bucket = connection.getHeaderField(X_RATE_LIMIT_BUCKET.toLowerCase());
+        
+        if (isRateLimited) {
+            LOGGER.warn("{}: {}", X_RATE_LIMIT_LIMIT, limit);
+            LOGGER.warn("{}: {}", X_RATE_LIMIT_REMAINING, remaining);
+            LOGGER.warn("{}: {}", X_RATE_LIMIT_RESET, reset);
+            LOGGER.warn("{}: {}", X_RATE_LIMIT_RESET_AFTER, resetAfterHeader);
+            LOGGER.warn("{}: {}", X_RATE_LIMIT_BUCKET, bucket);
+        } else {
+            LOGGER.debug("{}: {}", X_RATE_LIMIT_LIMIT, limit);
+            LOGGER.debug("{}: {}", X_RATE_LIMIT_REMAINING, remaining);
+            LOGGER.debug("{}: {}", X_RATE_LIMIT_RESET, reset);
+            LOGGER.debug("{}: {}", X_RATE_LIMIT_RESET_AFTER, resetAfterHeader);
+            LOGGER.debug("{}: {}", X_RATE_LIMIT_BUCKET, bucket);
+            LOGGER.debug("Rate limit will be reset after: {}", 
+                OffsetDateTime.ofInstant(Instant.ofEpochSecond(Long.parseLong(reset)), ZoneOffset.systemDefault()));
         }
     }
 }

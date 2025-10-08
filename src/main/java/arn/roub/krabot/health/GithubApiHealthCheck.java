@@ -28,13 +28,11 @@ public class GithubApiHealthCheck implements HealthCheck {
             connection.setReadTimeout(5000);
             
             int responseCode = connection.getResponseCode();
-            connection.disconnect();
             
-            if (responseCode == HttpURLConnection.HTTP_OK) {
-                return HealthCheckResponse.up("GitHub API is reachable");
-            } else {
-                return HealthCheckResponse.down("GitHub API returned status: " + responseCode);
-            }
+            return switch (responseCode) {
+                case HttpURLConnection.HTTP_OK -> HealthCheckResponse.up("GitHub API is reachable");
+                default -> HealthCheckResponse.down("GitHub API returned status: " + responseCode);
+            };
         } catch (Exception e) {
             return HealthCheckResponse.down("GitHub API unreachable: " + e.getMessage());
         }

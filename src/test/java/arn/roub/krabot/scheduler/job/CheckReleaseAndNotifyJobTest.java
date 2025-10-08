@@ -33,11 +33,11 @@ class CheckReleaseAndNotifyJobTest {
     @DisplayName("Should execute successfully when no errors occur")
     void shouldExecuteSuccessfully() {
         // Given
-        doNothing().when(scrappingService).loadGithubAndSendNotificationIfWeHaveNewRelease();
+        doNothing().when(scrappingService).checkGithubReleaseAndNotify();
 
         // When & Then
         assertDoesNotThrow(() -> job.execute());
-        verify(scrappingService, times(1)).loadGithubAndSendNotificationIfWeHaveNewRelease();
+        verify(scrappingService, times(1)).checkGithubReleaseAndNotify();
         verify(exceptionNotificationService, never()).exceptionManagement(any());
     }
 
@@ -46,7 +46,7 @@ class CheckReleaseAndNotifyJobTest {
     void shouldHandleExceptionsAndNotify() {
         // Given
         RuntimeException testException = new RuntimeException("Test error");
-        doThrow(testException).when(scrappingService).loadGithubAndSendNotificationIfWeHaveNewRelease();
+        doThrow(testException).when(scrappingService).checkGithubReleaseAndNotify();
         doNothing().when(exceptionNotificationService).exceptionManagement(any());
 
         // When & Then - Should not propagate exception
@@ -59,7 +59,7 @@ class CheckReleaseAndNotifyJobTest {
     void shouldHandleNotificationFailure() {
         // Given
         RuntimeException scrapException = new RuntimeException("Scraping failed");
-        doThrow(scrapException).when(scrappingService).loadGithubAndSendNotificationIfWeHaveNewRelease();
+        doThrow(scrapException).when(scrappingService).checkGithubReleaseAndNotify();
         doThrow(new DiscordNotificationException("Discord failed"))
             .when(exceptionNotificationService).exceptionManagement(any());
 
@@ -75,7 +75,7 @@ class CheckReleaseAndNotifyJobTest {
         RuntimeException scrapException = new RuntimeException("Scraping failed");
         RuntimeException notificationException = new DiscordNotificationException("Discord notification failed");
         
-        doThrow(scrapException).when(scrappingService).loadGithubAndSendNotificationIfWeHaveNewRelease();
+        doThrow(scrapException).when(scrappingService).checkGithubReleaseAndNotify();
         doThrow(notificationException).when(exceptionNotificationService).exceptionManagement(scrapException);
 
         // When

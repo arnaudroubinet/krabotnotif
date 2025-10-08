@@ -24,11 +24,13 @@ import java.util.Optional;
 @ApplicationScoped
 public class KralandScrappingClient {
 
+    private static final int MAX_PASSWORD_SIZE = 8;
+    private static final String KRALAND_MAIL_ICON = "http://img.kraland.org/5/kmn.gif";
+    private static final String MARK_AS_READ_ALT = "Marquer comme lu/non lu";
+    
     private final HttpClient httpClient;
     private final HttpRequest loadKi;
     private final HttpRequest.Builder authKi;
-
-    private final static int MAX_PASSWORD_SIZE = 8;
 
     public KralandScrappingClient() {
         try {
@@ -77,11 +79,15 @@ public class KralandScrappingClient {
             Elements imgNodes = document.select("img");
 
             imgNodes.forEach(element -> {
-                if ("http://img.kraland.org/5/kmn.gif".equals(element.attr("src")) && !"Marquer comme lu/non lu".equals(element.attr("alt"))) {
+                if (KRALAND_MAIL_ICON.equals(element.attr("src")) && !MARK_AS_READ_ALT.equals(element.attr("alt"))) {
                     var parent = Optional.ofNullable(element.parent()).map(Element::parent).orElseThrow();
                     kramails.add(new Kramail(
                             parent.childNodes().get(2).childNode(0).attr("value"),
-                            parent.childNodes().get(3).childNode(0).childNodes().stream().filter(node -> TextNode.class.isAssignableFrom(node.getClass())).reduce(Node::after).orElseThrow().outerHtml(),
+                            parent.childNodes().get(3).childNode(0).childNodes().stream()
+                                    .filter(TextNode.class::isInstance)
+                                    .reduce(Node::after)
+                                    .orElseThrow()
+                                    .outerHtml(),
                             parent.childNodes().get(4).childNode(0).outerHtml()));
                 }
             });

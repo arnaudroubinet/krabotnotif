@@ -43,8 +43,21 @@ public class GithubScrappingClient {
     public String getLastReleaseTag() {
         try {
             HttpResponse<String> response = httpClient.send(latestReleaseRequest, HttpResponse.BodyHandlers.ofString());
+            
+            if (response.statusCode() != 200) {
+                throw new GithubApiException("GitHub API returned status code: " + response.statusCode() + " - " + response.body());
+            }
+            
             JsonNode jsonNode = OBJECT_MAPPER.readTree(response.body());
-            return jsonNode.get("tag_name").asText();
+            JsonNode tagNode = jsonNode.get("tag_name");
+            
+            if (tagNode == null || tagNode.isNull()) {
+                throw new GithubApiException("GitHub API response missing 'tag_name' field. Response: " + response.body());
+            }
+            
+            return tagNode.asText();
+        } catch (GithubApiException e) {
+            throw e;
         } catch (Exception e) {
             throw new GithubApiException("Failed to fetch latest release tag from GitHub", e);
         }

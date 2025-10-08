@@ -33,11 +33,11 @@ class ScrapAndNotifyJobTest {
     @DisplayName("Should execute successfully when no errors occur")
     void shouldExecuteSuccessfully() {
         // Given
-        doNothing().when(scrappingService).loadKiAndSendNotificationIfWeHaveReport();
+        doNothing().when(scrappingService).checkKralandAndNotify();
 
         // When & Then
         assertDoesNotThrow(() -> job.execute());
-        verify(scrappingService, times(1)).loadKiAndSendNotificationIfWeHaveReport();
+        verify(scrappingService, times(1)).checkKralandAndNotify();
         verify(exceptionNotificationService, never()).exceptionManagement(any());
     }
 
@@ -46,7 +46,7 @@ class ScrapAndNotifyJobTest {
     void shouldHandleExceptionsAndNotify() {
         // Given
         RuntimeException testException = new RuntimeException("Test error");
-        doThrow(testException).when(scrappingService).loadKiAndSendNotificationIfWeHaveReport();
+        doThrow(testException).when(scrappingService).checkKralandAndNotify();
         doNothing().when(exceptionNotificationService).exceptionManagement(any());
 
         // When & Then - Should not propagate exception
@@ -59,7 +59,7 @@ class ScrapAndNotifyJobTest {
     void shouldHandleNotificationFailure() {
         // Given
         RuntimeException scrapException = new RuntimeException("Scraping failed");
-        doThrow(scrapException).when(scrappingService).loadKiAndSendNotificationIfWeHaveReport();
+        doThrow(scrapException).when(scrappingService).checkKralandAndNotify();
         doThrow(new DiscordNotificationException("Discord failed"))
             .when(exceptionNotificationService).exceptionManagement(any());
 
@@ -75,7 +75,7 @@ class ScrapAndNotifyJobTest {
         RuntimeException scrapException = new RuntimeException("Scraping failed");
         RuntimeException notificationException = new DiscordNotificationException("Discord notification failed");
         
-        doThrow(scrapException).when(scrappingService).loadKiAndSendNotificationIfWeHaveReport();
+        doThrow(scrapException).when(scrappingService).checkKralandAndNotify();
         doThrow(notificationException).when(exceptionNotificationService).exceptionManagement(scrapException);
 
         // When

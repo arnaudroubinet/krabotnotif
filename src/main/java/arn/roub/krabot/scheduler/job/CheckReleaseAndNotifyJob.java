@@ -22,7 +22,7 @@ public class CheckReleaseAndNotifyJob {
     @Scheduled(cron = "{scheduler.github.scraping.cron}")
     public void execute() {
         try {
-            scrappingService.loadGithubAndSendNotificationIfWeHaveNewRelease();
+            scrappingService.checkGithubReleaseAndNotify();
         } catch (RuntimeException runtimeException) {
             try {
                 LOGGER.error("Error occurred during the scrap or the notification post. {}", runtimeException.getMessage());

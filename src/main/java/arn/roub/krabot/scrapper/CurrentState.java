@@ -3,35 +3,35 @@ package arn.roub.krabot.scrapper;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+
 @ApplicationScoped
 public class CurrentState {
 
-    private Integer nbkramail;
-    private Boolean hasNotification;
+    private final AtomicInteger nbkramail = new AtomicInteger(0);
+    private final AtomicReference<Boolean> hasNotification = new AtomicReference<>(false);
     private final String currentVersion;
-    private String latestVersion;
+    private final AtomicReference<String> latestVersion = new AtomicReference<>("Unknown");
 
     public CurrentState(@ConfigProperty(name = "quarkus.application.version", defaultValue = "Unknown") String version) {
-        this.currentVersion = "v"+version;
-        this.nbkramail = 0;
-        this.hasNotification = false;
-        this.latestVersion = "Unknown";
+        this.currentVersion = "v" + version;
     }
 
     public Integer getNbkramail() {
-        return nbkramail;
+        return nbkramail.get();
     }
 
-    public void setNbkramail(Integer nbkramail) {
-        this.nbkramail = nbkramail;
+    public void setNbkramail(Integer value) {
+        this.nbkramail.set(value);
     }
 
     public Boolean getHasNotification() {
-        return hasNotification;
+        return hasNotification.get();
     }
 
-    public void setHasNotification(Boolean hasNotification) {
-        this.hasNotification = hasNotification;
+    public void setHasNotification(Boolean value) {
+        this.hasNotification.set(value);
     }
 
     public String getCurrentVersion() {
@@ -39,10 +39,10 @@ public class CurrentState {
     }
 
     public String getLatestVersion() {
-        return latestVersion;
+        return latestVersion.get();
     }
 
-    public void setLatestVersion(String latestVersion) {
-        this.latestVersion = latestVersion;
+    public void setLatestVersion(String value) {
+        this.latestVersion.set(value);
     }
 }
