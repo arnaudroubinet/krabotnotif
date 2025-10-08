@@ -25,10 +25,10 @@ public class CheckReleaseAndNotifyJob {
             scrappingService.loadGithubAndSendNotificationIfWeHaveNewRelease();
         } catch (RuntimeException runtimeException) {
             try {
-                LOGGER.error("Error occurred during the scrap or the notification post.", runtimeException);
+                LOGGER.error("Error occurred during the scrap or the notification post. {}", runtimeException.getMessage());
                 exceptionNotificationService.exceptionManagement(runtimeException);
             } catch (RuntimeException exceptionManagementError) {
-                LOGGER.error("Error occurred during the error notification !!", exceptionManagementError);
+                LOGGER.error("Error occurred during the error notification !! {}", exceptionManagementError.getMessage());
                 runtimeException.addSuppressed(exceptionManagementError);
             }
         }
