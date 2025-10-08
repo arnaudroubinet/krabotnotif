@@ -1,50 +1,34 @@
 package arn.roub.krabot.errors;
 
+import arn.roub.krabot.config.DiscordConfig;
+import arn.roub.krabot.exception.DiscordNotificationException;
 import arn.roub.krabot.utils.DiscordWebhook;
 import arn.roub.krabot.utils.PostponedNotificationException;
 import jakarta.enterprise.context.ApplicationScoped;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 
-
-import java.io.PrintWriter;
-import java.io.StringWriter;
 
 @ApplicationScoped
 public class ExceptionNotificationService {
 
-    private final String hookUrl;
-    private final String avatar;
-    private final String username;
-    private final String prefixMessage;
+    private final DiscordConfig discordConfig;
 
-    public ExceptionNotificationService(
-            @ConfigProperty(name = "discord.hook.url") String hookUrl,
-            @ConfigProperty(name = "discord.hook.avatar.url") String avatar,
-            @ConfigProperty(name = "discord.hook.username") String username,
-            @ConfigProperty(name = "discord.hook.error.prefix-message") String prefixMessage) {
-        this.hookUrl = hookUrl;
-        this.avatar = avatar;
-        this.username = username;
-        this.prefixMessage = prefixMessage;
+    public ExceptionNotificationService(DiscordConfig discordConfig) {
+        this.discordConfig = discordConfig;
     }
 
     public void exceptionManagement(Throwable ex) {
         try {
-            StringWriter sw = new StringWriter();
-            PrintWriter pw = new PrintWriter(sw);
-            ex.printStackTrace(pw);
-            DiscordWebhook discordWebhook = new DiscordWebhook(hookUrl);
-            discordWebhook.setAvatarUrl(avatar);
-            discordWebhook.setUsername(username);
-            discordWebhook.setContent(prefixMessage +" "+ ex.getMessage());
+            DiscordWebhook discordWebhook = new DiscordWebhook(discordConfig.url());
+            discordWebhook.setAvatarUrl(discordConfig.avatarUrl());
+            discordWebhook.setUsername(discordConfig.username());
+            discordWebhook.setContent(discordConfig.errorPrefixMessage() +" "+ ex.getMessage());
             discordWebhook.setTts(false);
             discordWebhook.execute();
 
         } catch (PostponedNotificationException pnex) {
             //Do nothing
         } catch (Exception e) {
-            throw new RuntimeException(e);
-
+            throw new DiscordNotificationException("Failed to send error notification to Discord", e);
         }
 
     }

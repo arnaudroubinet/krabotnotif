@@ -1,5 +1,6 @@
 package arn.roub.krabot.scrapper;
 
+import arn.roub.krabot.exception.GithubApiException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -35,7 +36,7 @@ public class GithubScrappingClient {
             latestReleaseRequest = HttpRequest.newBuilder(new URI("https://api.github.com/repos/arnaudroubinet/krabotnotif/releases/latest")).GET().build();
 
         } catch (URISyntaxException e) {
-            throw new RuntimeException(e);
+            throw new GithubApiException("Failed to initialize GitHub API client", e);
         }
     }
 
@@ -46,7 +47,7 @@ public class GithubScrappingClient {
             JsonNode jsonNode = OBJECT_MAPPER.readTree(response.body());
             return jsonNode.get("tag_name").asText();
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new GithubApiException("Failed to fetch latest release tag from GitHub", e);
         }
     }
 }

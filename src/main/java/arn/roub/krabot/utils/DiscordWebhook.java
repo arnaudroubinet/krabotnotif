@@ -1,13 +1,12 @@
 package arn.roub.krabot.utils;
 
-import lombok.Setter;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.HttpsURLConnection;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.lang.reflect.Array;
 import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -17,7 +16,6 @@ import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 
 /**
  * Class used to execute Discord Webhooks with low effort
@@ -28,19 +26,17 @@ public class DiscordWebhook {
     private static final String X_RATE_LIMIT_RESET = "X-RateLimit-Reset";
     private static final String X_RATE_LIMIT_RESET_AFTER = "X-RateLimit-Reset-After";
     private static final String X_RATE_LIMIT_BUCKET = "X-RateLimit-Bucket";
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private final Logger LOGGER = LoggerFactory.getLogger(DiscordWebhook.class);
     private final String url;
-    @Setter
     private String content;
-    @Setter
     private String username;
-    @Setter
     private String avatarUrl;
 
     private OffsetDateTime resetAfter;
-    @Setter
     private boolean tts;
+    
     /**
      * Constructs a new DiscordWebhook instance
      *
@@ -48,6 +44,22 @@ public class DiscordWebhook {
      */
     public DiscordWebhook(String url) {
         this.url = url;
+    }
+
+    public void setContent(String content) {
+        this.content = content;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public void setAvatarUrl(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
+    }
+
+    public void setTts(boolean tts) {
+        this.tts = tts;
     }
 
     public void execute() throws IOException {
@@ -63,12 +75,11 @@ public class DiscordWebhook {
             throw new IllegalArgumentException("Set content or add at least one EmbedObject");
         }
 
-        JSONObject json = new JSONObject();
-
-        json.put("content", this.content);
-        json.put("username", this.username);
-        json.put("avatar_url", this.avatarUrl);
-        json.put("tts", this.tts);
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("content", this.content);
+        payload.put("username", this.username);
+        payload.put("avatar_url", this.avatarUrl);
+        payload.put("tts", this.tts);
 
         URL url = URI.create(this.url).toURL();
         HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
@@ -77,10 +88,10 @@ public class DiscordWebhook {
         connection.setDoOutput(true);
         connection.setRequestMethod("POST");
 
-        OutputStream stream = connection.getOutputStream();
-        stream.write(json.toString().getBytes(StandardCharsets.ISO_8859_1));
-        stream.flush();
-        stream.close();
+        try (OutputStream stream = connection.getOutputStream()) {
+            stream.write(OBJECT_MAPPER.writeValueAsString(payload).getBytes(StandardCharsets.ISO_8859_1));
+            stream.flush();
+        }
 
         int responseCode = connection.getResponseCode();
         if (responseCode != 200 && responseCode != 204)
@@ -110,59 +121,10 @@ public class DiscordWebhook {
                         }
                 );
 
-        connection.getInputStream().close();
-        connection.disconnect();
-    }
-
-
-
-    private static class JSONObject {
-
-        private final HashMap<String, Object> map = new HashMap<>();
-
-        void put(String key, Object value) {
-            if (value != null) {
-                map.put(key, value);
-            }
-        }
-
-        @Override
-        public String toString() {
-            StringBuilder builder = new StringBuilder();
-            Set<Map.Entry<String, Object>> entrySet = map.entrySet();
-            builder.append("{");
-
-            int i = 0;
-            for (Map.Entry<String, Object> entry : entrySet) {
-                Object val = entry.getValue();
-                builder.append(quote(entry.getKey())).append(":");
-
-                if (val instanceof String) {
-                    builder.append(quote(String.valueOf(val)));
-                } else if (val instanceof Integer) {
-                    builder.append(Integer.valueOf(String.valueOf(val)));
-                } else if (val instanceof Boolean) {
-                    builder.append(val);
-                } else if (val instanceof JSONObject) {
-                    builder.append(val);
-                } else if (val.getClass().isArray()) {
-                    builder.append("[");
-                    int len = Array.getLength(val);
-                    for (int j = 0; j < len; j++) {
-                        builder.append(Array.get(val, j).toString()).append(j != len - 1 ? "," : "");
-                    }
-                    builder.append("]");
-                }
-
-                builder.append(++i == entrySet.size() ? "}" : ",");
-            }
-
-            return builder.toString();
-        }
-
-        private String quote(String string) {
-            return "\"" + string + "\"";
+        try (var inputStream = connection.getInputStream()) {
+            inputStream.close();
+        } finally {
+            connection.disconnect();
         }
     }
-
 }
