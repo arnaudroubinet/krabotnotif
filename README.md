@@ -60,6 +60,32 @@ Le numéro de version applique le [semver](https://semver.org/lang/fr/).
     le numéro de version MINEUR quand il y a des ajouts de fonctionnalités rétrocompatibles,
     le numéro de version de CORRECTIF quand il y a des corrections d’anomalies rétrocompatibles.
 
+## Processus de release
+
+Le processus de release est géré par un workflow GitHub Actions unique :
+
+**Increment Version, Tag and Release** (`.github/workflows/increment-version.yml`)
+   - Déclenché manuellement via l'interface GitHub Actions
+   - Permet de choisir le type d'incrémentation : `major`, `minor`, ou `patch`
+   - Récupère la dernière version taguée
+   - Incrémente automatiquement le numéro de version selon le type choisi
+   - Met à jour le fichier `pom.xml` avec la nouvelle version
+   - Commit et pousse le changement de version
+   - Crée et pousse le nouveau tag (format `vX.Y.Z`)
+   - Build les images Docker multi-architecture (JVM et native)
+   - Pousse les images vers DockerHub avec les tags `latest` et la version
+   - Exécute les scans de sécurité Trivy
+   - Crée une release GitHub avec notes de version auto-générées
+
+**Note :** Le workflow `release.yml` existe toujours et se déclenche automatiquement lors de la création manuelle d'un tag (format `v*`), mais n'est plus utilisé par le processus de release automatique.
+
+### Comment créer une nouvelle release :
+
+1. Aller dans l'onglet "Actions" du repository GitHub
+2. Sélectionner le workflow "Increment Version, Tag and Release"
+3. Cliquer sur "Run workflow"
+4. Choisir le type d'incrémentation (patch par défaut)
+5. Le workflow exécutera automatiquement toutes les étapes de release
 
 # Docker compose
 Le fichier docker compose suivant est fait pour s'executer sous portainer en utilisant son système de variable d'environnement. remplacez stack.env par votre fichier de variables ou passer lui directement les variables en remplaçant "env_file:" par "environment: "
