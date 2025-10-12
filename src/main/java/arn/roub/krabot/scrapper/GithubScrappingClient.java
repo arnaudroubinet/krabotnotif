@@ -4,6 +4,8 @@ import arn.roub.krabot.exception.GithubApiException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.enterprise.context.ApplicationScoped;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.CookieManager;
 import java.net.ProxySelector;
@@ -17,6 +19,7 @@ import java.time.Duration;
 @ApplicationScoped
 public class GithubScrappingClient {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(GithubScrappingClient.class);
     private final HttpClient httpClient;
     private final HttpRequest latestReleaseRequest;
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -42,20 +45,49 @@ public class GithubScrappingClient {
 
     public String getLastReleaseTag() {
         try {
-            HttpResponse<String> response = httpClient.send(latestReleaseRequest, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = httpClient.send(
+                latestReleaseRequest, 
+                HttpResponse.BodyHandlers.ofString()
+            );
             
-            if (response.statusCode() != 200) {
-                throw new GithubApiException("GitHub API returned status code: " + response.statusCode() + " - " + response.body());
+            int statusCode = response.statusCode();
+            String responseBody = response.body();
+            
+            // Handle rate limiting specially
+            if (statusCode == 429) {
+                String rateLimitReset = response.headers()
+                    .firstValue("X-RateLimit-Reset")
+                    .orElse("unknown");
+                throw new GithubApiException(
+                    String.format("GitHub API rate limit exceeded. Reset at: %s", rateLimitReset)
+                );
             }
             
-            JsonNode jsonNode = OBJECT_MAPPER.readTree(response.body());
+            // Handle other error responses
+            if (statusCode != 200) {
+                String errorMessage = String.format(
+                    "GitHub API returned status %d: %s", 
+                    statusCode,
+                    responseBody.substring(0, Math.min(500, responseBody.length()))
+                );
+                throw new GithubApiException(errorMessage);
+            }
+            
+            // Parse successful response
+            JsonNode jsonNode = OBJECT_MAPPER.readTree(responseBody);
             JsonNode tagNode = jsonNode.get("tag_name");
             
             if (tagNode == null || tagNode.isNull()) {
-                throw new GithubApiException("GitHub API response missing 'tag_name' field. Response: " + response.body());
+                throw new GithubApiException(
+                    "GitHub API response missing 'tag_name' field. Response: " + 
+                    responseBody.substring(0, Math.min(200, responseBody.length()))
+                );
             }
             
-            return tagNode.asText();
+            String tag = tagNode.asText();
+            LOGGER.debug("Retrieved latest GitHub release tag: {}", tag);
+            return tag;
+            
         } catch (GithubApiException e) {
             throw e;
         } catch (Exception e) {
