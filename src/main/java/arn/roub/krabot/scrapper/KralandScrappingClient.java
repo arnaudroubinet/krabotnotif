@@ -22,6 +22,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Optional;
+import java.util.concurrent.Executors;
 
 @ApplicationScoped
 public class KralandScrappingClient {
@@ -44,6 +45,7 @@ public class KralandScrappingClient {
                     .priority(1)
                     .proxy(ProxySelector.getDefault())
                     .version(HttpClient.Version.HTTP_2)
+                    .executor(Executors.newVirtualThreadPerTaskExecutor()) // Java 21 virtual threads for better concurrency
                     .build();
 
 

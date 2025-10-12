@@ -15,6 +15,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.concurrent.Executors;
 
 @ApplicationScoped
 public class GithubScrappingClient {
@@ -33,6 +34,7 @@ public class GithubScrappingClient {
                     .priority(1)
                     .proxy(ProxySelector.getDefault())
                     .version(HttpClient.Version.HTTP_2)
+                    .executor(Executors.newVirtualThreadPerTaskExecutor()) // Java 21 virtual threads for better concurrency
                     .build();
 
             latestReleaseRequest = HttpRequest.newBuilder(new URI("https://api.github.com/repos/arnaudroubinet/krabotnotif/releases/latest")).GET().build();
