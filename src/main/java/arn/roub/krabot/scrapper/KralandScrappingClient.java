@@ -8,6 +8,8 @@ import org.jsoup.nodes.Element;
 import org.jsoup.nodes.Node;
 import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.CookieManager;
 import java.net.ProxySelector;
@@ -24,6 +26,7 @@ import java.util.Optional;
 @ApplicationScoped
 public class KralandScrappingClient {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(KralandScrappingClient.class);
     private static final int MAX_PASSWORD_SIZE = 8;
     private static final String KRALAND_MAIL_ICON = "http://img.kraland.org/5/kmn.gif";
     private static final String MARK_AS_READ_ALT = "Marquer comme lu/non lu";
@@ -64,12 +67,38 @@ public class KralandScrappingClient {
     public ScrappingResponse hasNotification(String kiUser, String kiPassword) {
         try {
             HttpResponse<String> response = httpClient.send(loadKi, HttpResponse.BodyHandlers.ofString(StandardCharsets.ISO_8859_1));
+            
             if (response.body().contains("IDENTIFIER")) {
+                LOGGER.debug("Authentication required, logging in...");
                 String realPassword = kiPassword.length() > MAX_PASSWORD_SIZE ? kiPassword.substring(0, MAX_PASSWORD_SIZE) : kiPassword;
                 String body = "p1=" + kiUser + "&p2=" + realPassword + "&Submit=Ok!";
-                httpClient.send(authKi.POST(HttpRequest.BodyPublishers.ofString(body)).build(), HttpResponse.BodyHandlers.ofString());
+                
+                // Explicitly handle auth response
+                HttpResponse<String> authResponse = httpClient.send(
+                    authKi.POST(HttpRequest.BodyPublishers.ofString(body)).build(), 
+                    HttpResponse.BodyHandlers.ofString()
+                );
+                
+                // Check auth response status
+                if (authResponse.statusCode() >= 400) {
+                    throw new KralandScrapingException(
+                        "Authentication failed with status: " + authResponse.statusCode()
+                    );
+                }
+                
+                LOGGER.debug("Authentication successful, fetching notifications...");
+                
+                // Get authenticated page
                 response = httpClient.send(loadKi, HttpResponse.BodyHandlers.ofString());
             }
+            
+            // Check final response status
+            if (response.statusCode() >= 400) {
+                throw new KralandScrapingException(
+                    "Failed to fetch Kraland page with status: " + response.statusCode()
+                );
+            }
+            
             var report = response.body().contains("report2.gif");
             var kramails = new ArrayList<Kramail>();
 
