@@ -7,6 +7,8 @@ import org.eclipse.microprofile.health.HealthCheckResponse;
 import org.eclipse.microprofile.health.Readiness;
 
 import javax.net.ssl.HttpsURLConnection;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
@@ -26,14 +28,24 @@ public class DiscordWebhookHealthCheck implements HealthCheck {
 
     @Override
     public HealthCheckResponse call() {
+        HttpsURLConnection connection = null;
         try {
             URL url = URI.create(discordConfig.url()).toURL();
-            HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
+            connection = (HttpsURLConnection) url.openConnection();
             connection.setRequestMethod("HEAD");
             connection.setConnectTimeout(5000);
             connection.setReadTimeout(5000);
             
             int responseCode = connection.getResponseCode();
+            
+            // Consume response stream to free resources (even for HEAD requests)
+            try (InputStream stream = (responseCode >= 200 && responseCode < 300)
+                    ? connection.getInputStream()
+                    : connection.getErrorStream()) {
+                if (stream != null) {
+                    stream.transferTo(OutputStream.nullOutputStream());
+                }
+            }
             
             return switch (responseCode) {
                 case HttpURLConnection.HTTP_OK, HttpURLConnection.HTTP_NO_CONTENT -> 
@@ -42,6 +54,10 @@ public class DiscordWebhookHealthCheck implements HealthCheck {
             };
         } catch (Exception e) {
             return HealthCheckResponse.down("Discord webhook unreachable: " + e.getMessage());
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
         }
     }
 }
