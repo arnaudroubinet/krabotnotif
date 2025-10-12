@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.HttpsURLConnection;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.net.URL;
@@ -113,8 +114,15 @@ public class DiscordWebhook {
                     }
                 });
 
-        try (var inputStream = connection.getInputStream()) {
-            inputStream.close();
+        // Properly consume response body to release connection
+        // Use errorStream for error responses (4xx, 5xx), inputStream for success (2xx, 3xx)
+        try (InputStream stream = (responseCode >= 200 && responseCode < 300) 
+                ? connection.getInputStream() 
+                : connection.getErrorStream()) {
+            if (stream != null) {
+                // Consume and discard the stream to free resources
+                stream.transferTo(OutputStream.nullOutputStream());
+            }
         } finally {
             connection.disconnect();
         }
