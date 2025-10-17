@@ -78,13 +78,13 @@ jobs:
           severity: 'CRITICAL,HIGH'
 
       - name: Upload Trivy JVM scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: 'trivy-results-jvm.sarif'
           category: jvm-image
 
       - name: Upload Trivy native scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: 'trivy-results-native.sarif'
           category: native-image
