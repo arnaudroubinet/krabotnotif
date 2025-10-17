@@ -103,7 +103,7 @@ public class MemoryMonitoringService {
     }
 
     /**
-     * Sets up a shutdown hook to handle OutOfMemoryError gracefully.
+     * Sets up a default uncaught exception handler to handle OutOfMemoryError gracefully.
      */
     private void setupOutOfMemoryErrorHandler() {
         Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> {
