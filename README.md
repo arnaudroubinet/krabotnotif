@@ -10,6 +10,50 @@ services:
       DISCORD_HOOK : Url de votre webhook
       KRALAND_USER : Votre user kraland
       KRALAND_PASSWORD : Votre password kraland
+      # Optional: JVM memory settings for containers
+      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0"
+    restart: unless-stopped
+```
+
+# Memory Management et Kubernetes
+
+KrabotNotif inclut des fonctionnalités avancées de gestion de la mémoire pour les déploiements Kubernetes :
+
+- **Garbage Collection programmé** : Exécution horaire configurable pour prévenir les fuites mémoire
+- **Health Check mémoire** : Probe Kubernetes qui surveille l'utilisation mémoire
+- **Gestion OutOfMemoryError** : Logging détaillé en cas de problèmes mémoire
+- **Seuils d'alerte** : Avertissements à 80%, critique à 90%
+
+Pour les déploiements Kubernetes, consultez [KUBERNETES.md](KUBERNETES.md) pour la configuration détaillée.
+
+### Variables d'environnement pour la mémoire
+
+```bash
+# Planification du GC (défaut: toutes les heures)
+JOB_GC_SCHEDULER_CRON=0 0 * ? * *
+
+# Seuils de mémoire (défaut: 80% warning, 90% critical)
+MEMORY_WARNING_THRESHOLD=80
+MEMORY_CRITICAL_THRESHOLD=90
+
+# Configuration JVM recommandée pour containers
+JAVA_OPTS="-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -XX:+UseContainerSupport"
+```
+
+# TLDR (English)
+```
+services:
+  krabotnotif:
+    container_name: krabotnotif
+    image: arnaudroubinet/krabotnotif:latest-jvm
+    ports:
+      - 8080:8080
+    environment:
+      DISCORD_HOOK : Your webhook URL
+      KRALAND_USER : Your kraland username
+      KRALAND_PASSWORD : Your kraland password
+      # Optional: JVM memory settings for containers
+      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0"
     restart: unless-stopped
 ```
 
@@ -41,7 +85,10 @@ DISCORD_LAST_MESSAGE : Le message lors de l'extinction du scanner
 DISCORD_RELEASE_MESSAGE : Le message lors de la publication d'une nouvelle version
 DISCORD_ERROR_PREFIX_MESSAGE: Le message en prefix d'une exception
 JOB_KRALAND_SCHEDULER_EVERY : La récurrence du job analysant kraland, la valeur par défaut est 60s
-JOB_GITHUB_SCHEDULER_CRON : La cron du job analysant github, la valeur par défaut est 0 0 11 ? * * * (Toutes les jours à 11h)
+JOB_GITHUB_SCHEDULER_CRON : La cron du job analysant github, la valeur par défaut est 0 0 11 ? * * * (Tous les jours à 11h00:00)
+JOB_GC_SCHEDULER_CRON : La cron du job de garbage collection, la valeur par défaut est 0 0 * ? * * (À la minute 0 de chaque heure)
+MEMORY_WARNING_THRESHOLD : Seuil d'avertissement mémoire en pourcentage, la valeur par défaut est 80
+MEMORY_CRITICAL_THRESHOLD : Seuil critique mémoire en pourcentage, la valeur par défaut est 90
 ```
 Pour DISCORD_KRAMAIL_MESSAGE, vous pouvez rajouter "\*originator\*" et "\*title\*" dans le message.
 Ces balises, serrons remplacées par les valeurs du message.

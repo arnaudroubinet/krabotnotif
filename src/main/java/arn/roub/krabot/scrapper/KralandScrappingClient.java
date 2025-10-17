@@ -67,8 +67,13 @@ public class KralandScrappingClient {
 
 
     public ScrappingResponse hasNotification(String kiUser, String kiPassword) {
+        HttpResponse<String> response = null;
+        HttpResponse<String> authResponse = null;
+        Document document = null;
+        Elements imgNodes = null;
+        
         try {
-            HttpResponse<String> response = httpClient.send(loadKi, HttpResponse.BodyHandlers.ofString(StandardCharsets.ISO_8859_1));
+            response = httpClient.send(loadKi, HttpResponse.BodyHandlers.ofString(StandardCharsets.ISO_8859_1));
             
             if (response.body().contains("IDENTIFIER")) {
                 LOGGER.debug("Authentication required, logging in...");
@@ -76,7 +81,7 @@ public class KralandScrappingClient {
                 String body = "p1=" + kiUser + "&p2=" + realPassword + "&Submit=Ok!";
                 
                 // Explicitly handle auth response
-                HttpResponse<String> authResponse = httpClient.send(
+                authResponse = httpClient.send(
                     authKi.POST(HttpRequest.BodyPublishers.ofString(body)).build(), 
                     HttpResponse.BodyHandlers.ofString()
                 );
@@ -87,6 +92,9 @@ public class KralandScrappingClient {
                         "Authentication failed with status: " + authResponse.statusCode()
                     );
                 }
+                
+                // Release auth response body to free memory
+                authResponse = null;
                 
                 LOGGER.debug("Authentication successful, fetching notifications...");
                 
@@ -101,13 +109,18 @@ public class KralandScrappingClient {
                 );
             }
             
-            var report = response.body().contains("report2.gif");
+            String responseBody = response.body();
+            var report = responseBody.contains("report2.gif");
             var kramails = new ArrayList<Kramail>();
 
-            // Convertir la chaîne HTML en InputStream);
-            Document document = Jsoup.parse(response.body());
+            // Parse HTML document
+            document = Jsoup.parse(responseBody);
+            // Release response body reference to allow GC
+            response = null;
+            responseBody = null;
+            
             // Récupérer toutes les balises <img>
-            Elements imgNodes = document.select("img");
+            imgNodes = document.select("img");
 
             imgNodes.forEach(element -> {
                 if (KRALAND_MAIL_ICON.equals(element.attr("src")) && !MARK_AS_READ_ALT.equals(element.attr("alt"))) {
@@ -123,10 +136,19 @@ public class KralandScrappingClient {
                 }
             });
 
+            // Release document and nodes to allow GC
+            imgNodes = null;
+            document = null;
 
             return new ScrappingResponse(kramails, report);
         } catch (Exception e) {
             throw new KralandScrapingException("Failed to scrape Kraland notifications", e);
+        } finally {
+            // Ensure resources are released even on exception
+            response = null;
+            authResponse = null;
+            document = null;
+            imgNodes = null;
         }
     }
 }

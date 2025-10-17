@@ -46,14 +46,18 @@ public class GithubScrappingClient {
 
 
     public String getLastReleaseTag() {
+        HttpResponse<String> response = null;
+        String responseBody = null;
+        JsonNode jsonNode = null;
+        
         try {
-            HttpResponse<String> response = httpClient.send(
+            response = httpClient.send(
                 latestReleaseRequest, 
                 HttpResponse.BodyHandlers.ofString()
             );
             
             int statusCode = response.statusCode();
-            String responseBody = response.body();
+            responseBody = response.body();
             
             // Handle rate limiting specially
             if (statusCode == 429) {
@@ -76,17 +80,29 @@ public class GithubScrappingClient {
             }
             
             // Parse successful response
-            JsonNode jsonNode = OBJECT_MAPPER.readTree(responseBody);
+            jsonNode = OBJECT_MAPPER.readTree(responseBody);
+            
+            // Release response body early
+            response = null;
+            responseBody = null;
+            
             JsonNode tagNode = jsonNode.get("tag_name");
             
             if (tagNode == null || tagNode.isNull()) {
+                String jsonStr = jsonNode.toString();
+                String preview = jsonStr.substring(0, Math.min(200, jsonStr.length()));
+                // Release jsonNode before throwing
+                jsonNode = null;
                 throw new GithubApiException(
-                    "GitHub API response missing 'tag_name' field. Response: " + 
-                    responseBody.substring(0, Math.min(200, responseBody.length()))
+                    "GitHub API response missing 'tag_name' field. Response: " + preview
                 );
             }
             
             String tag = tagNode.asText();
+            
+            // Release parsed JSON to allow GC
+            jsonNode = null;
+            
             LOGGER.debug("Retrieved latest GitHub release tag: {}", tag);
             return tag;
             
@@ -94,6 +110,11 @@ public class GithubScrappingClient {
             throw e;
         } catch (Exception e) {
             throw new GithubApiException("Failed to fetch latest release tag from GitHub", e);
+        } finally {
+            // Ensure all resources are released
+            response = null;
+            responseBody = null;
+            jsonNode = null;
         }
     }
 }
