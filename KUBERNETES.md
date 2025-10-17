@@ -351,6 +351,12 @@ Native images have:
 - No JVM GC overhead (uses different memory model)
 - Better suited for memory-constrained environments
 
+**Note on Memory Monitoring in Native Mode:**
+- JMX-based memory threshold notifications are not available in native images
+- Basic memory monitoring (health checks, GC job, OOM handler) still works
+- Detailed GC statistics logging is limited compared to JVM mode
+- For production monitoring, rely on Kubernetes metrics and health endpoints
+
 ## Example: Resource-Constrained Environment
 
 For very small clusters or limited resources:

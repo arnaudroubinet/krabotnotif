@@ -20,6 +20,9 @@ import javax.management.openmbean.CompositeData;
  * Service for monitoring memory usage and handling OutOfMemoryError conditions.
  * Registers listeners for memory threshold notifications and provides utilities
  * for memory status checking.
+ * 
+ * Note: JMX-based monitoring (memory threshold notifications) is only available in JVM mode.
+ * In native mode, basic memory monitoring and OOM handling still work.
  */
 @ApplicationScoped
 public class MemoryMonitoringService {
@@ -30,6 +33,7 @@ public class MemoryMonitoringService {
     private final int warningThreshold;
     private final int criticalThreshold;
     private final MemoryMXBean memoryMXBean;
+    private final boolean isNativeMode;
     
     public MemoryMonitoringService(
             @ConfigProperty(name = "memory.warning.threshold.percent", defaultValue = "80") int warningThreshold,
@@ -37,6 +41,8 @@ public class MemoryMonitoringService {
         this.warningThreshold = warningThreshold;
         this.criticalThreshold = criticalThreshold;
         this.memoryMXBean = ManagementFactory.getMemoryMXBean();
+        // Detect if running in native mode
+        this.isNativeMode = System.getProperty("org.graalvm.nativeimage.imagecode") != null;
     }
 
     @PostConstruct
@@ -48,8 +54,14 @@ public class MemoryMonitoringService {
 
     /**
      * Sets up JMX notifications for memory threshold breaches.
+     * Only available in JVM mode - skipped in native mode.
      */
     private void setupMemoryThresholdNotifications() {
+        if (isNativeMode) {
+            LOGGER.info("Running in native mode - JMX memory threshold notifications not available");
+            return;
+        }
+        
         try {
             // Get the platform MBean server and register listener
             NotificationEmitter emitter = (NotificationEmitter) memoryMXBean;
@@ -130,14 +142,16 @@ public class MemoryMonitoringService {
             LOGGER.error("  Used memory:  {} MB", usedMemoryMB);
             LOGGER.error("  Free memory:  {} MB", freeMemoryMB);
             
-            // Log memory pool details
-            LOGGER.error("Memory pool details:");
-            for (MemoryPoolMXBean pool : ManagementFactory.getMemoryPoolMXBeans()) {
-                long poolUsedMB = pool.getUsage().getUsed() / (long)BYTES_TO_MB;
-                long poolMaxMB = pool.getUsage().getMax() > 0 ? 
-                        pool.getUsage().getMax() / (long)BYTES_TO_MB : -1;
-                LOGGER.error("  {}: {} MB / {} MB", pool.getName(), poolUsedMB, 
-                        poolMaxMB > 0 ? poolMaxMB + " MB" : "unlimited");
+            // Log memory pool details (JVM mode only)
+            if (!isNativeMode) {
+                LOGGER.error("Memory pool details:");
+                for (MemoryPoolMXBean pool : ManagementFactory.getMemoryPoolMXBeans()) {
+                    long poolUsedMB = pool.getUsage().getUsed() / (long)BYTES_TO_MB;
+                    long poolMaxMB = pool.getUsage().getMax() > 0 ? 
+                            pool.getUsage().getMax() / (long)BYTES_TO_MB : -1;
+                    LOGGER.error("  {}: {} MB / {} MB", pool.getName(), poolUsedMB, 
+                            poolMaxMB > 0 ? poolMaxMB + " MB" : "unlimited");
+                }
             }
             
             LOGGER.error("========================================");
@@ -172,12 +186,16 @@ public class MemoryMonitoringService {
         LOGGER.info("  Warning threshold: {}%", warningThreshold);
         LOGGER.info("  Critical threshold: {}%", criticalThreshold);
         
-        // Log GC information
-        LOGGER.info("Garbage Collector info:");
-        ManagementFactory.getGarbageCollectorMXBeans().forEach(gc -> 
-            LOGGER.info("  {}: {} collections, {} ms total time", 
-                    gc.getName(), gc.getCollectionCount(), gc.getCollectionTime())
-        );
+        // Log GC information (JVM mode only)
+        if (!isNativeMode) {
+            LOGGER.info("Garbage Collector info:");
+            ManagementFactory.getGarbageCollectorMXBeans().forEach(gc -> 
+                LOGGER.info("  {}: {} collections, {} ms total time", 
+                        gc.getName(), gc.getCollectionCount(), gc.getCollectionTime())
+            );
+        } else {
+            LOGGER.info("Running in native mode - detailed GC info not available");
+        }
     }
 
     /**
