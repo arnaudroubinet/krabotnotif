@@ -85,8 +85,8 @@ DISCORD_LAST_MESSAGE : Le message lors de l'extinction du scanner
 DISCORD_RELEASE_MESSAGE : Le message lors de la publication d'une nouvelle version
 DISCORD_ERROR_PREFIX_MESSAGE: Le message en prefix d'une exception
 JOB_KRALAND_SCHEDULER_EVERY : La récurrence du job analysant kraland, la valeur par défaut est 60s
-JOB_GITHUB_SCHEDULER_CRON : La cron du job analysant github, la valeur par défaut est 0 0 11 ? * * * (Toutes les jours à 11h)
-JOB_GC_SCHEDULER_CRON : La cron du job de garbage collection, la valeur par défaut est 0 0 * ? * * (Toutes les heures)
+JOB_GITHUB_SCHEDULER_CRON : La cron du job analysant github, la valeur par défaut est 0 0 11 ? * * * (Tous les jours à 11h00:00)
+JOB_GC_SCHEDULER_CRON : La cron du job de garbage collection, la valeur par défaut est 0 0 * ? * * (À la minute 0 de chaque heure)
 MEMORY_WARNING_THRESHOLD : Seuil d'avertissement mémoire en pourcentage, la valeur par défaut est 80
 MEMORY_CRITICAL_THRESHOLD : Seuil critique mémoire en pourcentage, la valeur par défaut est 90
 ```

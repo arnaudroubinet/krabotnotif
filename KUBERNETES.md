@@ -55,7 +55,6 @@ spec:
             -XX:MaxRAMPercentage=75.0
             -XX:InitialRAMPercentage=50.0
             -XX:+UseContainerSupport
-            -XX:+ExitOnOutOfMemoryError
             -XX:+PrintGCDetails
             -XX:+PrintGCDateStamps
             -Xlog:gc*:stdout:time,level,tags
@@ -368,8 +367,9 @@ resources:
 env:
 - name: JAVA_OPTS
   value: >-
-    -XX:+UseSerialGC
+    -XX:+UseG1GC
     -XX:MaxRAMPercentage=70.0
+    -XX:MaxGCPauseMillis=200
 - name: JOB_GC_SCHEDULER_CRON
   value: "0 0/15 * ? * *"  # Every 15 minutes
 ```
