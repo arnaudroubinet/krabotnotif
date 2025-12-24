@@ -74,4 +74,21 @@ class KralandScrappingClientTest {
         assertNotNull(response);
         assertNotNull(response.kramails());
     }
+
+    @Test
+    @DisplayName("Should authenticate with provided real credentials and fetch kramails")
+    @Tag("integration")
+    void shouldAuthenticateWithRealCredentials() {
+        // Given
+        String user = "thesith";
+        String password = "Thesith!";
+
+        // When
+        ScrappingResponse response = client.hasNotification(user, password);
+
+        // Then
+        assertNotNull(response);
+        assertNotNull(response.kramails());
+        // We expect the response to indicate whether we have notifications; at least it should return a valid object
+    }
 }
