@@ -19,8 +19,8 @@ class ScrapingResultTest {
     void shouldCreateResult() {
         // Given
         List<Kramail> kramails = List.of(
-                new Kramail(new KramailId("km1"), "Title 1", "Sender1", "Recipient1", "membre"),
-                new Kramail(new KramailId("km2"), "Title 2", "Sender2", "Recipient2", "plateau")
+                new Kramail(new KramailId("km1"), "Title 1", "Sender1", "Recipient1"),
+                new Kramail(new KramailId("km2"), "Title 2", "Sender2", "Recipient2")
         );
         boolean hasNotification = true;
 
@@ -64,8 +64,8 @@ class ScrapingResultTest {
     @DisplayName("Should support equality based on all fields")
     void shouldSupportEquality() {
         // Given
-        List<Kramail> kramails1 = List.of(new Kramail(new KramailId("km1"), "Title", "Sender", "Recipient", "membre"));
-        List<Kramail> kramails2 = List.of(new Kramail(new KramailId("km1"), "Title", "Sender", "Recipient", "membre"));
+        List<Kramail> kramails1 = List.of(new Kramail(new KramailId("km1"), "Title", "Sender", "Recipient"));
+        List<Kramail> kramails2 = List.of(new Kramail(new KramailId("km1"), "Title", "Sender", "Recipient"));
 
         ScrapingResult result1 = new ScrapingResult(kramails1, true);
         ScrapingResult result2 = new ScrapingResult(kramails2, true);
@@ -80,7 +80,7 @@ class ScrapingResultTest {
     @DisplayName("Should have consistent hashCode")
     void shouldHaveConsistentHashCode() {
         // Given
-        List<Kramail> kramails = List.of(new Kramail(new KramailId("km1"), "Title", "Sender", "Recipient", "membre"));
+        List<Kramail> kramails = List.of(new Kramail(new KramailId("km1"), "Title", "Sender", "Recipient"));
         ScrapingResult result1 = new ScrapingResult(kramails, true);
         ScrapingResult result2 = new ScrapingResult(kramails, true);
 
@@ -97,7 +97,7 @@ class ScrapingResultTest {
         assertTrue(result1.kramails().isEmpty());
 
         // Scenario 2: Has kramails but no notification
-        List<Kramail> kramails = List.of(new Kramail(new KramailId("km1"), "Title", "Sender", "Recipient", "membre"));
+        List<Kramail> kramails = List.of(new Kramail(new KramailId("km1"), "Title", "Sender", "Recipient"));
         ScrapingResult result2 = new ScrapingResult(kramails, false);
         assertFalse(result2.hasNotification());
         assertEquals(1, result2.kramails().size());
