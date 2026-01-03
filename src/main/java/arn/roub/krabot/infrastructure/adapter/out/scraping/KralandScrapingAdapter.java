@@ -131,6 +131,6 @@ public class KralandScrapingAdapter implements KralandScrapingPort {
             return List.of();
         }
 
-        return parser.parseKramails(response.body(), account.section());
+        return parser.parseKramails(response.body());
     }
 }

@@ -16,7 +16,6 @@ public class DiscordNotificationAdapter implements NotificationPort {
     private static final String PLACEHOLDER_TITLE = "*title*";
     private static final String PLACEHOLDER_ORIGINATOR = "*originator*";
     private static final String PLACEHOLDER_RECIPIENT = "*recipient*";
-    private static final String PLACEHOLDER_SECTION = "*section*";
     private static final String GITHUB_RELEASE_URL = "https://github.com/arnaudroubinet/krabotnotif/releases/latest";
 
     private final DiscordWebhookClient webhookClient;
@@ -60,8 +59,7 @@ public class DiscordNotificationAdapter implements NotificationPort {
         String message = kramailTemplate
                 .replace(PLACEHOLDER_TITLE, kramail.title())
                 .replace(PLACEHOLDER_ORIGINATOR, kramail.originator())
-                .replace(PLACEHOLDER_RECIPIENT, kramail.recipient())
-                .replace(PLACEHOLDER_SECTION, kramail.section());
+                .replace(PLACEHOLDER_RECIPIENT, kramail.recipient());
 
         sendWithRetry(message, "kramail");
     }

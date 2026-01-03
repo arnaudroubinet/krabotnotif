@@ -28,7 +28,7 @@ public interface DiscordConfig {
 
     /**
      * Template de message pour les kramails.
-     * Placeholders: *originator*, *title*, *recipient*, *section*
+     * Placeholders: *originator*, *title*, *recipient*
      */
     @WithDefault("Hey, tu as un kramail de '*originator*' ayant pour sujet '*title*' !!")
     String messageKramail();

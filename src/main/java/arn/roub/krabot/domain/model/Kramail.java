@@ -7,8 +7,7 @@ public record Kramail(
         KramailId id,
         String title,
         String originator,
-        String recipient,
-        String section
+        String recipient
 ) {
 
     public Kramail {

@@ -53,10 +53,9 @@ public class KralandHtmlParser {
 
             String accountName = link.ownText().trim();
             String fullUrl = href.startsWith("http") ? href : "http://www.kraland.org/" + href;
-            String section = href.toLowerCase().contains("joyeux") ? "plateau" : "membre";
 
-            accounts.add(new AccountInfo(accountName, fullUrl, section));
-            LOGGER.debug("Found account: {} ({}) at {}", accountName, section, fullUrl);
+            accounts.add(new AccountInfo(accountName, fullUrl));
+            LOGGER.debug("Found account: {} at {}", accountName, fullUrl);
         }
 
         return accounts;
@@ -65,7 +64,7 @@ public class KralandHtmlParser {
     /**
      * Parse les kramails depuis une page de compte.
      */
-    public List<Kramail> parseKramails(String html, String section) {
+    public List<Kramail> parseKramails(String html) {
         Document doc = Jsoup.parse(html);
         List<Kramail> kramails = new ArrayList<>();
 
@@ -96,9 +95,9 @@ public class KralandHtmlParser {
             String originator = cells.get(2).select("a").text();
 
             if (!id.isEmpty() && !title.isEmpty()) {
-                kramails.add(new Kramail(new KramailId(id), title, originator, recipient, section));
-                LOGGER.debug("Found unread kramail: id={}, title={}, from={}, to={}, section={}",
-                        id, title, originator, recipient, section);
+                kramails.add(new Kramail(new KramailId(id), title, originator, recipient));
+                LOGGER.debug("Found unread kramail: id={}, title={}, from={}, to={}",
+                        id, title, originator, recipient);
             }
         }
 
@@ -108,5 +107,5 @@ public class KralandHtmlParser {
     /**
      * Information d'un compte Kraland.
      */
-    public record AccountInfo(String name, String url, String section) {}
+    public record AccountInfo(String name, String url) {}
 }

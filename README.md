@@ -90,9 +90,19 @@ JOB_GC_SCHEDULER_CRON : La cron du job de garbage collection, la valeur par déf
 MEMORY_WARNING_THRESHOLD : Seuil d'avertissement mémoire en pourcentage, la valeur par défaut est 80
 MEMORY_CRITICAL_THRESHOLD : Seuil critique mémoire en pourcentage, la valeur par défaut est 90
 ```
-Pour DISCORD_KRAMAIL_MESSAGE, vous pouvez rajouter "\*originator\*" et "\*title\*" dans le message.
-Ces balises, serrons remplacées par les valeurs du message.
+Pour DISCORD_KRAMAIL_MESSAGE, vous pouvez rajouter les balises suivantes qui seront remplacées par les valeurs du message :
 
+- *originator* : l'expéditeur du kramail (par ex. l'utilisateur qui vous a envoyé le message)
+- *title* : le sujet / le titre du kramail
+- *recipient* : le destinataire du kramail (votre pseudo)
+
+Exemple (template par défaut) :
+
+```
+📬 Kramail pour *recipient* de *originator*: "*title*"
+```
+
+Assurez-vous d'échapper ou de citer correctement les caractères spéciaux si nécessaire.
 
 # Deprecation et remplacement :
 ```

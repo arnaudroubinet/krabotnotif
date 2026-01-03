@@ -20,26 +20,24 @@ class KramailTest {
         String title = "Important Message";
         String originator = "Admin";
         String recipient = "User";
-        String section = "membre";
 
         // When
-        Kramail kramail = new Kramail(id, title, originator, recipient, section);
+        Kramail kramail = new Kramail(id, title, originator, recipient);
 
         // Then
         assertEquals(id, kramail.id());
         assertEquals(title, kramail.title());
         assertEquals(originator, kramail.originator());
         assertEquals(recipient, kramail.recipient());
-        assertEquals(section, kramail.section());
     }
 
     @Test
     @DisplayName("Should support equality based on all fields")
     void shouldSupportEquality() {
         // Given
-        Kramail kramail1 = new Kramail(new KramailId("km1"), "Title", "Sender", "Recipient", "membre");
-        Kramail kramail2 = new Kramail(new KramailId("km1"), "Title", "Sender", "Recipient", "membre");
-        Kramail kramail3 = new Kramail(new KramailId("km2"), "Title", "Sender", "Recipient", "membre");
+        Kramail kramail1 = new Kramail(new KramailId("km1"), "Title", "Sender", "Recipient");
+        Kramail kramail2 = new Kramail(new KramailId("km1"), "Title", "Sender", "Recipient");
+        Kramail kramail3 = new Kramail(new KramailId("km2"), "Title", "Sender", "Recipient");
 
         // Then
         assertEquals(kramail1, kramail2);
@@ -50,8 +48,8 @@ class KramailTest {
     @DisplayName("Should have consistent hashCode")
     void shouldHaveConsistentHashCode() {
         // Given
-        Kramail kramail1 = new Kramail(new KramailId("km1"), "Title", "Sender", "Recipient", "membre");
-        Kramail kramail2 = new Kramail(new KramailId("km1"), "Title", "Sender", "Recipient", "membre");
+        Kramail kramail1 = new Kramail(new KramailId("km1"), "Title", "Sender", "Recipient");
+        Kramail kramail2 = new Kramail(new KramailId("km1"), "Title", "Sender", "Recipient");
 
         // Then
         assertEquals(kramail1.hashCode(), kramail2.hashCode());
@@ -62,7 +60,7 @@ class KramailTest {
     void shouldThrowExceptionForNullId() {
         // When & Then
         assertThrows(IllegalArgumentException.class, () ->
-                new Kramail(null, "Title", "Sender", "Recipient", "membre")
+                new Kramail(null, "Title", "Sender", "Recipient")
         );
     }
 }
