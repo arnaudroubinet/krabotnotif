@@ -1,5 +1,19 @@
-# TLDR
-```
+# KrabotNotif
+
+Application Quarkus utilisant les webhooks Discord pour surveiller votre compte Kraland.
+
+## Fonctionnalités
+
+- Se connecte à www.kraland.org
+- Vérifie toutes les minutes les nouveaux messages (rapport) et kramails
+- Envoie une notification Discord le cas échéant
+- Ne renvoie pas deux fois la même notification pour le même événement (sauf redémarrage)
+
+> ⚠️ Si vous recevez un nouveau message (notif et non kramail) sur Kraland entre votre lecture et le scan, le bot ne pourra pas le détecter.
+
+## Quick Start
+
+```yaml
 services:
   krabotnotif:
     container_name: krabotnotif
@@ -7,146 +21,55 @@ services:
     ports:
       - 8080:8080
     environment:
-      DISCORD_HOOK : Url de votre webhook
-      KRALAND_USER : Votre user kraland
-      KRALAND_PASSWORD : Votre password kraland
-      # Optional: JVM memory settings for containers
-      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0"
+      DISCORD_HOOK: <Url de votre webhook>
+      KRALAND_USER: <Votre user kraland>
+      KRALAND_PASSWORD: <Votre password kraland>
     restart: unless-stopped
 ```
 
-# Memory Management et Kubernetes
+## Configuration
 
-KrabotNotif inclut des fonctionnalités avancées de gestion de la mémoire pour les déploiements Kubernetes :
+### Variables requises
 
-- **Garbage Collection programmé** : Exécution horaire configurable pour prévenir les fuites mémoire
-- **Health Check mémoire** : Probe Kubernetes qui surveille l'utilisation mémoire
-- **Gestion OutOfMemoryError** : Logging détaillé en cas de problèmes mémoire
-- **Seuils d'alerte** : Avertissements à 80%, critique à 90%
+| Variable | Description |
+|----------|-------------|
+| `DISCORD_HOOK` | URL de votre webhook Discord |
+| `KRALAND_USER` | Votre identifiant Kraland |
+| `KRALAND_PASSWORD` | Votre mot de passe Kraland |
 
-Pour les déploiements Kubernetes, consultez [KUBERNETES.md](KUBERNETES.md) pour la configuration détaillée.
+### Variables optionnelles
 
-### Variables d'environnement pour la mémoire
+| Variable | Description | Valeur par défaut |
+|----------|-------------|-------------------|
+| `DISCORD_AVATAR_URL` | URL de l'avatar du bot | - |
+| `DISCORD_USER` | Nom du bot | - |
+| `DISCORD_KRAMAIL_MESSAGE` | Message pour les kramails | `📬 Kramail pour *recipient* de *originator*: "*title*"` |
+| `DISCORD_NOTIFICATION_MESSAGE` | Message pour les notifications | - |
+| `DISCORD_FIRST_MESSAGE` | Message à l'initialisation | - |
+| `DISCORD_LAST_MESSAGE` | Message à l'extinction | - |
+| `DISCORD_RELEASE_MESSAGE` | Message pour les nouvelles versions | - |
+| `DISCORD_ERROR_PREFIX_MESSAGE` | Préfixe des messages d'erreur | - |
+| `JOB_KRALAND_SCHEDULER_EVERY` | Récurrence du scan Kraland | `60s` |
+| `JOB_GITHUB_SCHEDULER_CRON` | Cron du scan GitHub | `0 0 11 ? * *` (11h00) |
 
-```bash
-# Planification du GC (défaut: toutes les heures)
-JOB_GC_SCHEDULER_CRON=0 0 * ? * *
+#### Template des kramails
 
-# Seuils de mémoire (défaut: 80% warning, 90% critical)
-MEMORY_WARNING_THRESHOLD=80
-MEMORY_CRITICAL_THRESHOLD=90
+Pour `DISCORD_KRAMAIL_MESSAGE`, utilisez ces balises :
+- `*originator*` : expéditeur du kramail
+- `*title*` : sujet du kramail
+- `*recipient*` : destinataire (votre pseudo)
 
-# Configuration JVM recommandée pour containers
-JAVA_OPTS="-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -XX:+UseContainerSupport"
-```
-
-# TLDR (English)
-```
-services:
-  krabotnotif:
-    container_name: krabotnotif
-    image: arnaudroubinet/krabotnotif:latest-jvm
-    ports:
-      - 8080:8080
-    environment:
-      DISCORD_HOOK : Your webhook URL
-      KRALAND_USER : Your kraland username
-      KRALAND_PASSWORD : Your kraland password
-      # Optional: JVM memory settings for containers
-      JAVA_OPTS: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0"
-    restart: unless-stopped
-```
-
-# Personnalisation
-
-Krabot notif est une application Quarkus utilisant les webhook discord.
-
-Elle va :
-- Se connecter à www.kraland.org
-- Vérifier toutes les minutes si vous avez reçu un message dans votre rapport ou un nouveau kramail
-- Vous envoyez une notification sur discord le cas échéant
-- Elle ne renverra pas deux fois la même notification pour le même événement sauf si vous relancez le robot
-- /!\ Si vous recevez un nouveau message (notif et non kramail) sur kraland entre votre lecture et le scan, le bot ne pourras pas la détecter.
-
-Pour la configurer, vous devez passer les variables d'environnement suivantes :
-```
-DISCORD_HOOK : Url de votre webhook
-KRALAND_USER : Votre user kraland
-KRALAND_PASSWORD : Votre password kraland
-```
-Vous pouvez également surcharger ces variables :
-```
-DISCORD_AVATAR_URL : L'url de l'avatar du user qui poste le message
-DISCORD_USER : Le nom du user qui poste le message
-DISCORD_KRAMAIL_MESSAGE : Le message en cas de réception de kramail
-DISCORD_NOTIFICATION_MESSAGE : Le message en cas de notification
-DISCORD_FIRST_MESSAGE : Le message lors de l'initialisation du scanner
-DISCORD_LAST_MESSAGE : Le message lors de l'extinction du scanner
-DISCORD_RELEASE_MESSAGE : Le message lors de la publication d'une nouvelle version
-DISCORD_ERROR_PREFIX_MESSAGE: Le message en prefix d'une exception
-JOB_KRALAND_SCHEDULER_EVERY : La récurrence du job analysant kraland, la valeur par défaut est 60s
-JOB_GITHUB_SCHEDULER_CRON : La cron du job analysant github, la valeur par défaut est 0 0 11 ? * * * (Tous les jours à 11h00:00)
-JOB_GC_SCHEDULER_CRON : La cron du job de garbage collection, la valeur par défaut est 0 0 * ? * * (À la minute 0 de chaque heure)
-MEMORY_WARNING_THRESHOLD : Seuil d'avertissement mémoire en pourcentage, la valeur par défaut est 80
-MEMORY_CRITICAL_THRESHOLD : Seuil critique mémoire en pourcentage, la valeur par défaut est 90
-```
-Pour DISCORD_KRAMAIL_MESSAGE, vous pouvez rajouter les balises suivantes qui seront remplacées par les valeurs du message :
-
-- *originator* : l'expéditeur du kramail (par ex. l'utilisateur qui vous a envoyé le message)
-- *title* : le sujet / le titre du kramail
-- *recipient* : le destinataire du kramail (votre pseudo)
-
-Exemple (template par défaut) :
+### Migration
 
 ```
-📬 Kramail pour *recipient* de *originator*: "*title*"
+JOB_SCHEDULER_EVERY → JOB_KRALAND_SCHEDULER_EVERY
 ```
 
-Assurez-vous d'échapper ou de citer correctement les caractères spéciaux si nécessaire.
+## Docker Compose avec Portainer
 
-# Deprecation et remplacement :
-```
-JOB_SCHEDULER_EVERY -> JOB_KRALAND_SCHEDULER_EVERY
-```
+Pour utiliser avec Portainer et son système de variables d'environnement :
 
-# Versionning
-Le numéro de version applique le [semver](https://semver.org/lang/fr/).  
-Étant donné un numéro de version MAJEUR.MINEUR.CORRECTIF, il faut incrémenter :
-
-    le numéro de version MAJEUR quand il y a des changements non rétrocompatibles,
-    le numéro de version MINEUR quand il y a des ajouts de fonctionnalités rétrocompatibles,
-    le numéro de version de CORRECTIF quand il y a des corrections d’anomalies rétrocompatibles.
-
-## Processus de release
-
-Le processus de release est géré par un workflow GitHub Actions unique :
-
-**Increment Version, Tag and Release** (`.github/workflows/increment-version.yml`)
-   - Déclenché manuellement via l'interface GitHub Actions
-   - Permet de choisir le type d'incrémentation : `major`, `minor`, ou `patch`
-   - Récupère la dernière version taguée
-   - Incrémente automatiquement le numéro de version selon le type choisi
-   - Met à jour le fichier `pom.xml` avec la nouvelle version
-   - Commit et pousse le changement de version
-   - Crée et pousse le nouveau tag (format `vX.Y.Z`)
-   - Build les images Docker multi-architecture (JVM et native)
-   - Pousse les images vers DockerHub avec les tags `latest` et la version
-   - Exécute les scans de sécurité Trivy
-   - Crée une release GitHub avec notes de version auto-générées
-
-**Note :** Le workflow `release.yml` existe toujours et se déclenche automatiquement lors de la création manuelle d'un tag (format `v*`), mais n'est plus utilisé par le processus de release automatique.
-
-### Comment créer une nouvelle release :
-
-1. Aller dans l'onglet "Actions" du repository GitHub
-2. Sélectionner le workflow "Increment Version, Tag and Release"
-3. Cliquer sur "Run workflow"
-4. Choisir le type d'incrémentation (patch par défaut)
-5. Le workflow exécutera automatiquement toutes les étapes de release
-
-# Docker compose
-Le fichier docker compose suivant est fait pour s'executer sous portainer en utilisant son système de variable d'environnement. remplacez stack.env par votre fichier de variables ou passer lui directement les variables en remplaçant "env_file:" par "environment: "
-```
+```yaml
 services:
   krabotnotif:
     container_name: krabotnotif
@@ -158,9 +81,56 @@ services:
     restart: unless-stopped
 ```
 
-# Typologie des tags:
+Remplacez `env_file:` par `environment:` pour passer les variables directement.
 
-## Tous les tags existent en : 
-- xxx (Pour la version JVM)
-- xxx-native (Pour la version native)
-- xxx étant latest ou la version de release (v1.1.1)
+## Tags Docker
+
+Les tags existent en deux variantes :
+- `xxx` : version JVM
+- `xxx-native` : version native
+
+Où `xxx` peut être `latest` ou un numéro de version (ex: `v1.1.1`).
+
+## Fonctionnalités avancées
+
+### Gestion mémoire et Kubernetes
+
+KrabotNotif inclut des fonctionnalités de gestion mémoire pour les déploiements Kubernetes :
+
+- **Garbage Collection programmé** : exécution horaire configurable
+- **Health Check mémoire** : probe surveillant l'utilisation mémoire
+- **Seuils d'alerte** : warning à 80%, critique à 90%
+
+Configuration détaillée : [KUBERNETES.md](KUBERNETES.md)
+
+#### Variables mémoire
+
+| Variable | Description | Valeur par défaut |
+|----------|-------------|-------------------|
+| `JOB_GC_SCHEDULER_CRON` | Planification du GC | `0 0 * ? * *` (chaque heure) |
+| `MEMORY_WARNING_THRESHOLD` | Seuil warning (%) | `80` |
+| `MEMORY_CRITICAL_THRESHOLD` | Seuil critique (%) | `90` |
+| `JAVA_OPTS` | Options JVM | `-XX:+UseG1GC -XX:MaxRAMPercentage=75.0` |
+
+## Versionning
+
+Le projet suit [SemVer](https://semver.org/lang/fr/) : `MAJEUR.MINEUR.CORRECTIF`
+
+- **MAJEUR** : changements non rétrocompatibles
+- **MINEUR** : nouvelles fonctionnalités rétrocompatibles
+- **CORRECTIF** : corrections rétrocompatibles
+
+### Créer une release
+
+1. Aller dans **Actions** sur GitHub
+2. Sélectionner **Increment Version, Tag and Release**
+3. Cliquer sur **Run workflow**
+4. Choisir le type (`major`, `minor`, `patch`)
+
+Le workflow :
+- Incrémente la version et met à jour `pom.xml`
+- Crée le tag `vX.Y.Z`
+- Build les images Docker multi-architecture
+- Pousse vers DockerHub (`latest` + version)
+- Exécute les scans de sécurité Trivy
+- Crée la release GitHub
