@@ -80,6 +80,13 @@ public class KramailCheckScheduler implements DelayKramailCheckUseCase {
     public synchronized Instant delay() {
         if (currentTask != null && !currentTask.isDone()) {
             long remainingMs = currentTask.getDelay(TimeUnit.MILLISECONDS);
+
+            // Ne décaler que si la prochaine exécution est imminente (dans moins de delayAmount)
+            if (remainingMs > delayAmount.toMillis()) {
+                LOGGER.debug("Next kramail check is not imminent ({}ms remaining), not delaying", remainingMs);
+                return nextExecutionTime;
+            }
+
             currentTask.cancel(false);
             Duration newDelay = Duration.ofMillis(remainingMs).plus(delayAmount);
             LOGGER.info("Delaying next kramail check by {}. New delay: {}", delayAmount, newDelay);
