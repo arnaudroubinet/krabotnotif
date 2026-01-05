@@ -68,7 +68,9 @@ public class KramailCheckResource {
                         method: 'POST',
                         url: BACKEND_URL + '/krabot/kramail-check/delay',
                         onload: function(response) {
-                            console.log('[Krabot] Timer delayed successfully');
+                            const data = JSON.parse(response.responseText);
+                            const nextExecution = new Date(data.nextExecution).toLocaleString('fr-FR');
+                            console.log('[Krabot] Timer delayed successfully. Next execution: ' + nextExecution);
                         },
                         onerror: function(error) {
                             console.error('[Krabot] Failed to delay timer:', error);
