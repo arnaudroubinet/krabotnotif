@@ -3,6 +3,7 @@ package arn.roub.krabot.infrastructure.adapter.in.scheduler;
 import arn.roub.krabot.application.service.NotificationOrchestrator;
 import arn.roub.krabot.domain.port.in.CheckSleepUseCase;
 import arn.roub.krabot.domain.port.in.DelaySleepCheckUseCase;
+import io.quarkus.runtime.Startup;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -24,6 +25,7 @@ import java.util.concurrent.TimeUnit;
  * Timer pour la vérification quotidienne du rappel de sommeil.
  * Permet de décaler dynamiquement la prochaine exécution.
  */
+@Startup
 @ApplicationScoped
 public class SleepCheckScheduler implements DelaySleepCheckUseCase {
 
@@ -62,9 +64,9 @@ public class SleepCheckScheduler implements DelaySleepCheckUseCase {
         executor.shutdownNow();
     }
 
-    private synchronized Instant scheduleNextExecution() {
+    private synchronized void scheduleNextExecution() {
         Duration delay = calculateDelayUntilNextExecution();
-        return scheduleNext(delay);
+        scheduleNext(delay);
     }
 
     private Duration calculateDelayUntilNextExecution() {
@@ -81,11 +83,12 @@ public class SleepCheckScheduler implements DelaySleepCheckUseCase {
     private synchronized Instant scheduleNext(Duration delay) {
         currentTask = executor.schedule(this::executeAndReschedule, delay.toMillis(), TimeUnit.MILLISECONDS);
         nextExecutionTime = Instant.now().plus(delay);
-        LOGGER.debug("Next sleep check scheduled at {}", nextExecutionTime);
+        LOGGER.info("Next sleep check scheduled at {} (in {})", nextExecutionTime, delay);
         return nextExecutionTime;
     }
 
     private void executeAndReschedule() {
+        LOGGER.info("Executing scheduled sleep check...");
         try {
             checkSleepUseCase.execute();
         } catch (RuntimeException e) {
