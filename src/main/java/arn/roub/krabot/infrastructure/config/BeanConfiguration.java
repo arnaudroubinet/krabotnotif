@@ -3,10 +3,12 @@ package arn.roub.krabot.infrastructure.config;
 import arn.roub.krabot.application.service.NotificationOrchestrator;
 import arn.roub.krabot.application.usecase.CheckKramailsUseCaseImpl;
 import arn.roub.krabot.application.usecase.CheckReleaseUseCaseImpl;
+import arn.roub.krabot.application.usecase.CheckSleepUseCaseImpl;
 import arn.roub.krabot.application.usecase.GetCurrentStateUseCaseImpl;
 import arn.roub.krabot.domain.model.Account;
 import arn.roub.krabot.domain.port.in.CheckKramailsUseCase;
 import arn.roub.krabot.domain.port.in.CheckReleaseUseCase;
+import arn.roub.krabot.domain.port.in.CheckSleepUseCase;
 import arn.roub.krabot.domain.port.in.GetCurrentStateUseCase;
 import arn.roub.krabot.domain.port.out.GithubReleasePort;
 import arn.roub.krabot.domain.port.out.KralandScrapingPort;
@@ -80,7 +82,8 @@ public class BeanConfiguration {
                 discordConfig.messageKramail(),
                 discordConfig.messageNotification(),
                 discordConfig.release(),
-                discordConfig.errorPrefixMessage()
+                discordConfig.errorPrefixMessage(),
+                discordConfig.messageSleep()
         );
     }
 
@@ -113,6 +116,17 @@ public class BeanConfiguration {
                 githubReleasePort,
                 notificationPort,
                 stateRepositoryPort
+        );
+    }
+
+    @Produces
+    @ApplicationScoped
+    public CheckSleepUseCase checkSleepUseCase(NotificationPort notificationPort) {
+        Account account = new Account(kralandConfig.user(), kralandConfig.password());
+        return new CheckSleepUseCaseImpl(
+                kralandScrapingPort,
+                notificationPort,
+                account
         );
     }
 

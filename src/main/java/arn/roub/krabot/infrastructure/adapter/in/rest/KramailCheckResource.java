@@ -1,6 +1,7 @@
 package arn.roub.krabot.infrastructure.adapter.in.rest;
 
 import arn.roub.krabot.domain.port.in.DelayKramailCheckUseCase;
+import arn.roub.krabot.domain.port.in.DelaySleepCheckUseCase;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
@@ -20,14 +21,17 @@ import java.time.Instant;
 public class KramailCheckResource {
 
     private final DelayKramailCheckUseCase delayKramailCheckUseCase;
+    private final DelaySleepCheckUseCase delaySleepCheckUseCase;
     private final String backendUrl;
     private final String scriptVersion;
 
     public KramailCheckResource(
             DelayKramailCheckUseCase delayKramailCheckUseCase,
+            DelaySleepCheckUseCase delaySleepCheckUseCase,
             @ConfigProperty(name = "krabot.backend.url") String backendUrl
     ) {
         this.delayKramailCheckUseCase = delayKramailCheckUseCase;
+        this.delaySleepCheckUseCase = delaySleepCheckUseCase;
         this.backendUrl = backendUrl;
         this.scriptVersion = String.valueOf(Instant.now().getEpochSecond());
     }
@@ -36,11 +40,12 @@ public class KramailCheckResource {
     @Path("delay")
     @Produces(MediaType.APPLICATION_JSON)
     public Response delay() {
-        Instant nextExecution = delayKramailCheckUseCase.delay();
-        return Response.ok(new DelayResponseDto(nextExecution)).build();
+        Instant nextKramailExecution = delayKramailCheckUseCase.delay();
+        Instant nextSleepExecution = delaySleepCheckUseCase.delay();
+        return Response.ok(new DelayResponseDto(nextKramailExecution, nextSleepExecution)).build();
     }
 
-    public record DelayResponseDto(Instant nextExecution) {}
+    public record DelayResponseDto(Instant nextKramailExecution, Instant nextSleepExecution) {}
 
     @GET
     @Path("userscript.user.js")
@@ -69,8 +74,9 @@ public class KramailCheckResource {
                         url: BACKEND_URL + '/krabot/kramail-check/delay',
                         onload: function(response) {
                             const data = JSON.parse(response.responseText);
-                            const nextExecution = new Date(data.nextExecution).toLocaleString('fr-FR');
-                            console.log('[Krabot] Timer delayed successfully. Next execution: ' + nextExecution);
+                            const nextKramailExecution = new Date(data.nextKramailExecution).toLocaleString('fr-FR');
+                            const nextSleepExecution = new Date(data.nextSleepExecution).toLocaleString('fr-FR');
+                            console.log('[Krabot] Timers delayed successfully. Next kramail check: ' + nextKramailExecution + ', Next sleep check: ' + nextSleepExecution);
                         },
                         onerror: function(error) {
                             console.error('[Krabot] Failed to delay timer:', error);

@@ -25,6 +25,7 @@ public class DiscordNotificationAdapter implements NotificationPort {
     private final String notificationMessage;
     private final String releaseTemplate;
     private final String errorPrefix;
+    private final String sleepReminderMessage;
 
     public DiscordNotificationAdapter(
             DiscordWebhookClient webhookClient,
@@ -33,7 +34,8 @@ public class DiscordNotificationAdapter implements NotificationPort {
             String kramailTemplate,
             String notificationMessage,
             String releaseTemplate,
-            String errorPrefix
+            String errorPrefix,
+            String sleepReminderMessage
     ) {
         this.webhookClient = webhookClient;
         this.startupMessage = startupMessage;
@@ -42,6 +44,7 @@ public class DiscordNotificationAdapter implements NotificationPort {
         this.notificationMessage = notificationMessage;
         this.releaseTemplate = releaseTemplate;
         this.errorPrefix = errorPrefix;
+        this.sleepReminderMessage = sleepReminderMessage;
     }
 
     @Override
@@ -79,6 +82,11 @@ public class DiscordNotificationAdapter implements NotificationPort {
     public void sendErrorNotification(String message) {
         String fullMessage = errorPrefix + " " + message;
         sendSafely(fullMessage, "error");
+    }
+
+    @Override
+    public void sendSleepReminderNotification() {
+        sendWithRetry(sleepReminderMessage, "sleep reminder");
     }
 
     private void sendWithRetry(String message, String type) {

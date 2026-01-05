@@ -31,6 +31,7 @@ public class KralandScrapingAdapter implements KralandScrapingPort {
     private static final Logger LOGGER = LoggerFactory.getLogger(KralandScrapingAdapter.class);
     private static final String KRAMAIL_URL = "http://www.kraland.org/kramail";
     private static final String AUTH_URL = "http://www.kraland.org/accueil";
+    private static final String PLATEAU_URL = "http://www.kraland.org/jouer/plateau";
 
     private final HttpClient httpClient;
     private final KralandHtmlParser parser;
@@ -132,5 +133,29 @@ public class KralandScrapingAdapter implements KralandScrapingPort {
         }
 
         return parser.parseKramails(response.body());
+    }
+
+    @Override
+    public boolean isSleepAvailable(Account account) {
+        try {
+            authenticate(account);
+
+            HttpResponse<String> response = httpClient.send(
+                    HttpRequest.newBuilder(new URI(PLATEAU_URL)).GET().build(),
+                    HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)
+            );
+
+            if (response.statusCode() >= 400) {
+                throw new ScrapingException("Failed to fetch plateau page with status: " + response.statusCode());
+            }
+
+            boolean available = parser.isSleepButtonAvailable(response.body());
+            LOGGER.debug("Sleep button available: {}", available);
+            return available;
+        } catch (ScrapingException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ScrapingException("Failed to check sleep availability", e);
+        }
     }
 }

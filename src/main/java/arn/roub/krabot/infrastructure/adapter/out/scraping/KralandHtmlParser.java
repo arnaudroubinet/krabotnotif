@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Parser HTML pour extraire les données de Kraland.
@@ -24,7 +25,7 @@ public class KralandHtmlParser {
      */
     public boolean hasNotification(String html) {
         Document doc = Jsoup.parse(html);
-        return doc.select("i[class*=fa fa-bell]").next().get(0).attributes().get("class").equals("badge badge-danger");
+        return doc.select("i[class*=fa fa-bell]").next().getFirst().attributes().get("class").equals("badge badge-danger");
     }
 
     /**
@@ -74,7 +75,7 @@ public class KralandHtmlParser {
             return kramails;
         }
 
-        String recipient = h1Elements.first().ownText().trim();
+        String recipient = Objects.requireNonNull(h1Elements.first()).ownText().trim();
 
         Elements rows = doc.select("table tbody tr");
 
@@ -102,6 +103,24 @@ public class KralandHtmlParser {
         }
 
         return kramails;
+    }
+
+    /**
+     * Vérifie si le bouton "Dormir" est disponible (a la classe btn-primary).
+     */
+    public boolean isSleepButtonAvailable(String html) {
+        Document doc = Jsoup.parse(html);
+        Elements sleepLinks = doc.select("a:contains(Dormir)");
+
+        for (Element link : sleepLinks) {
+            if (link.hasClass("btn-primary")) {
+                LOGGER.debug("Found sleep button with btn-primary class");
+                return true;
+            }
+        }
+
+        LOGGER.debug("Sleep button not available (no btn-primary class)");
+        return false;
     }
 
     /**

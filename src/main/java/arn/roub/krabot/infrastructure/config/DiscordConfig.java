@@ -62,4 +62,10 @@ public interface DiscordConfig {
      */
     @WithDefault("Oh no !")
     String errorPrefixMessage();
+
+    /**
+     * Message de rappel de sommeil
+     */
+    @WithDefault("N'oublie pas de dormir")
+    String messageSleep();
 }

@@ -15,4 +15,12 @@ public interface KralandScrapingPort {
      * @return le résultat du scraping
      */
     ScrapingResult scrape(Account account);
+
+    /**
+     * Vérifie si l'action "Dormir" est disponible sur la page plateau.
+     *
+     * @param account les credentials du compte Kraland
+     * @return true si le bouton Dormir est disponible (btn-primary)
+     */
+    boolean isSleepAvailable(Account account);
 }
