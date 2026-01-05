@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>arn.roub.krabot</groupId>
     <artifactId>krabotnotif</artifactId>
-    <version>3.2.0</version>
+    <version>3.2.1</version>
 
     <properties>
         <compiler-plugin.version>3.14.1</compiler-plugin.version>
@@ -16,7 +16,7 @@
         <quarkus.platform.version>3.30.5</quarkus.platform.version>
         <skipITs>true</skipITs>
         <surefire-plugin.version>3.5.4</surefire-plugin.version>
-        <jsoup.version>1.21.2</jsoup.version>
+        <jsoup.version>1.22.1</jsoup.version>
     </properties>
 
     <dependencyManagement>
@@ -84,7 +84,7 @@
         <dependency>
             <groupId>com.tngtech.archunit</groupId>
             <artifactId>archunit-junit5</artifactId>
-            <version>1.2.1</version>
+            <version>1.4.1</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
