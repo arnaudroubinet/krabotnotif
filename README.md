@@ -8,6 +8,7 @@ Application Quarkus utilisant les webhooks Discord pour surveiller votre compte 
 - Vérifie toutes les minutes les nouveaux messages (rapport) et kramails
 - Envoie une notification Discord le cas échéant
 - Ne renvoie pas deux fois la même notification pour le même événement (sauf redémarrage)
+- **Rappel de sommeil** : vérifie quotidiennement si l'action "Dormir" est disponible et envoie un rappel
 
 > ⚠️ Si vous recevez un nouveau message (notif et non kramail) sur Kraland entre votre lecture et le scan, le bot ne pourra pas le détecter.
 
@@ -51,11 +52,13 @@ services:
 | `DISCORD_FIRST_MESSAGE` | Message à l'initialisation | `Krabot est de retour... pour vous jouer un mauvais tour !` |
 | `DISCORD_LAST_MESSAGE` | Message à l'extinction | `Je m'en vais, au revoir !` |
 | `DISCORD_RELEASE_MESSAGE` | Message pour les nouvelles versions | `Une nouvelle release de KrabotNotif est disponible` |
+| `DISCORD_SLEEP_MESSAGE` | Message de rappel de sommeil | `N'oublie pas de dormir` |
 | `DISCORD_ERROR_PREFIX_MESSAGE` | Préfixe des messages d'erreur | `Oh no !` |
 | `KRABOT_BACKEND_URL` | URL du backend Krabot | `http://localhost:8080` |
 | `JOB_KRALAND_SCHEDULER_EVERY` | Récurrence du scan Kraland | `60s` |
 | `JOB_KRALAND_SCHEDULER_DELAY` | Délai avant le premier scan | `5m` |
 | `JOB_GITHUB_SCHEDULER_CRON` | Cron du scan GitHub | `0 0 11 ? * * *` (11h00) |
+| `JOB_SLEEP_SCHEDULER_TIME` | Heure du rappel de sommeil (format HH:mm) | `20:00` |
 
 #### Format des durées Java
 
@@ -131,6 +134,23 @@ Les tags existent en deux variantes :
 Où `xxx` peut être `latest` ou un numéro de version (ex: `v1.1.1`).
 
 ## Fonctionnalités avancées
+
+### Rappel de sommeil
+
+KrabotNotif peut vous rappeler de faire dormir votre personnage chaque jour.
+
+#### Fonctionnement
+
+- Chaque jour à l'heure configurée (`JOB_SLEEP_SCHEDULER_TIME`, par défaut 20h00), le bot vérifie si l'action "Dormir" est disponible sur la page plateau
+- Si le bouton "Dormir" est actif (classe `btn-primary`), une notification Discord est envoyée
+- Cela permet de ne pas oublier de faire dormir son personnage avant la fin de journée
+
+#### Configuration
+
+| Variable | Description | Valeur par défaut |
+|----------|-------------|-------------------|
+| `JOB_SLEEP_SCHEDULER_TIME` | Heure de vérification (format HH:mm) | `20:00` |
+| `DISCORD_SLEEP_MESSAGE` | Message de rappel | `N'oublie pas de dormir` |
 
 ### Userscript pour optimiser la vérification
 
