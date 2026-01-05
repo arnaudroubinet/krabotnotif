@@ -98,6 +98,28 @@ Où `xxx` peut être `latest` ou un numéro de version (ex: `v1.1.1`).
 
 ## Fonctionnalités avancées
 
+### Userscript pour optimiser la vérification
+
+KrabotNotif propose un userscript permettant de ne pas contacter Kraland pendant votre session de jeu.
+
+#### Fonctionnement
+
+L'userscript est accessible via : `http://<votre-backend>:8080/krabot/kramail-check/userscript.user.js`
+
+Lorsque vous êtes connecté à www.kraland.org, le script :
+- Détecte automatiquement votre visite sur le site
+- Repousse le prochain scan de vérification de `JOB_KRALAND_SCHEDULER_DELAY` (par défaut 5 minutes)
+- Évite ainsi les vérifications inutiles pendant que vous êtes actif sur Kraland et donc de déclencher la sécurité de KI.
+
+#### Installation
+
+1. Installer un gestionnaire de userscripts (Tampermonkey, Greasemonkey, Violentmonkey)
+2. Accéder à l'URL du script : `http://<votre-backend>:8080/krabot/kramail-check/userscript.user.js`
+3. Le gestionnaire proposera automatiquement l'installation
+4. Accepter l'installation du script
+
+Le script s'exécutera automatiquement à chaque visite sur Kraland.
+
 ### Gestion mémoire et Kubernetes
 
 KrabotNotif inclut des fonctionnalités de gestion mémoire pour les déploiements Kubernetes :
