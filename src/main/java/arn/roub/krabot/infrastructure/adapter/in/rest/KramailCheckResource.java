@@ -1,5 +1,6 @@
 package arn.roub.krabot.infrastructure.adapter.in.rest;
 
+import arn.roub.krabot.domain.port.in.CheckSleepUseCase;
 import arn.roub.krabot.domain.port.in.DelayKramailCheckUseCase;
 import arn.roub.krabot.domain.port.in.DelaySleepCheckUseCase;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -10,6 +11,8 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
 
@@ -20,18 +23,23 @@ import java.time.Instant;
 @ApplicationScoped
 public class KramailCheckResource {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(KramailCheckResource.class);
+
     private final DelayKramailCheckUseCase delayKramailCheckUseCase;
     private final DelaySleepCheckUseCase delaySleepCheckUseCase;
+    private final CheckSleepUseCase checkSleepUseCase;
     private final String backendUrl;
     private final String scriptVersion;
 
     public KramailCheckResource(
             DelayKramailCheckUseCase delayKramailCheckUseCase,
             DelaySleepCheckUseCase delaySleepCheckUseCase,
+            CheckSleepUseCase checkSleepUseCase,
             @ConfigProperty(name = "krabot.backend.url") String backendUrl
     ) {
         this.delayKramailCheckUseCase = delayKramailCheckUseCase;
         this.delaySleepCheckUseCase = delaySleepCheckUseCase;
+        this.checkSleepUseCase = checkSleepUseCase;
         this.backendUrl = backendUrl;
         this.scriptVersion = String.valueOf(Instant.now().getEpochSecond());
     }
@@ -46,6 +54,24 @@ public class KramailCheckResource {
     }
 
     public record DelayResponseDto(Instant nextKramailExecution, Instant nextSleepExecution) {}
+
+    @POST
+    @Path("sleep-check")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response triggerSleepCheck() {
+        LOGGER.info("Manual sleep check triggered via REST API");
+        try {
+            checkSleepUseCase.execute();
+            return Response.ok(new SleepCheckResponseDto(true, "Sleep check executed successfully")).build();
+        } catch (Exception e) {
+            LOGGER.error("Manual sleep check failed: {}", e.getMessage());
+            return Response.serverError()
+                    .entity(new SleepCheckResponseDto(false, "Sleep check failed: " + e.getMessage()))
+                    .build();
+        }
+    }
+
+    public record SleepCheckResponseDto(boolean success, String message) {}
 
     @GET
     @Path("userscript.user.js")

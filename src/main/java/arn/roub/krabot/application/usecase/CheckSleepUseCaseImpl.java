@@ -35,13 +35,14 @@ public class CheckSleepUseCaseImpl implements CheckSleepUseCase {
     }
 
     private void checkAndNotify() {
+        LOGGER.info("Checking if sleep action is available...");
         boolean sleepAvailable = kralandScrapingPort.isSleepAvailable(account);
 
         if (sleepAvailable) {
             LOGGER.info("Sleep action is available, sending reminder notification");
             notificationPort.sendSleepReminderNotification();
         } else {
-            LOGGER.debug("Sleep action is not available");
+            LOGGER.info("Sleep action is not available (button not active)");
         }
     }
 

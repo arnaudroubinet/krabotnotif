@@ -112,14 +112,18 @@ public class KralandHtmlParser {
         Document doc = Jsoup.parse(html);
         Elements sleepLinks = doc.select("a:contains(Dormir)");
 
+        LOGGER.info("Found {} links containing 'Dormir'", sleepLinks.size());
+
         for (Element link : sleepLinks) {
+            String classes = link.attr("class");
+            LOGGER.info("Sleep link classes: {}", classes);
             if (link.hasClass("btn-primary")) {
-                LOGGER.debug("Found sleep button with btn-primary class");
+                LOGGER.info("Found sleep button with btn-primary class");
                 return true;
             }
         }
 
-        LOGGER.debug("Sleep button not available (no btn-primary class)");
+        LOGGER.info("Sleep button not available (no btn-primary class found)");
         return false;
     }
 
