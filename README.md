@@ -24,6 +24,9 @@ services:
       DISCORD_HOOK: <Url de votre webhook>
       KRALAND_USER: <Votre user kraland>
       KRALAND_PASSWORD: <Votre password kraland>
+      KRABOT_BACKEND_URL: http://localhost:8080
+      JOB_KRALAND_SCHEDULER_EVERY: 60s
+      JOB_KRALAND_SCHEDULER_DELAY: 5m
     restart: unless-stopped
 ```
 
@@ -41,16 +44,18 @@ services:
 
 | Variable | Description | Valeur par défaut |
 |----------|-------------|-------------------|
-| `DISCORD_AVATAR_URL` | URL de l'avatar du bot | - |
-| `DISCORD_USER` | Nom du bot | - |
+| `DISCORD_AVATAR_URL` | URL de l'avatar du bot | `http://img.kraland.org/a/krabot.jpg` |
+| `DISCORD_USER` | Nom du bot | `Krabot` |
 | `DISCORD_KRAMAIL_MESSAGE` | Message pour les kramails | `📬 Kramail pour *recipient* de *originator*: "*title*"` |
-| `DISCORD_NOTIFICATION_MESSAGE` | Message pour les notifications | - |
-| `DISCORD_FIRST_MESSAGE` | Message à l'initialisation | - |
-| `DISCORD_LAST_MESSAGE` | Message à l'extinction | - |
-| `DISCORD_RELEASE_MESSAGE` | Message pour les nouvelles versions | - |
-| `DISCORD_ERROR_PREFIX_MESSAGE` | Préfixe des messages d'erreur | - |
+| `DISCORD_NOTIFICATION_MESSAGE` | Message pour les notifications | `Hey, tu as une notification !!` |
+| `DISCORD_FIRST_MESSAGE` | Message à l'initialisation | `Krabot est de retour... pour vous jouer un mauvais tour !` |
+| `DISCORD_LAST_MESSAGE` | Message à l'extinction | `Je m'en vais, au revoir !` |
+| `DISCORD_RELEASE_MESSAGE` | Message pour les nouvelles versions | `Une nouvelle release de KrabotNotif est disponible` |
+| `DISCORD_ERROR_PREFIX_MESSAGE` | Préfixe des messages d'erreur | `Oh no !` |
+| `KRABOT_BACKEND_URL` | URL du backend Krabot | `http://localhost:8080` |
 | `JOB_KRALAND_SCHEDULER_EVERY` | Récurrence du scan Kraland | `60s` |
-| `JOB_GITHUB_SCHEDULER_CRON` | Cron du scan GitHub | `0 0 11 ? * *` (11h00) |
+| `JOB_KRALAND_SCHEDULER_DELAY` | Délai avant le premier scan | `5m` |
+| `JOB_GITHUB_SCHEDULER_CRON` | Cron du scan GitHub | `0 0 11 ? * * *` (11h00) |
 
 #### Template des kramails
 
