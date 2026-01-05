@@ -52,17 +52,7 @@ public class KralandScrapingAdapter implements KralandScrapingPort {
     @Override
     public ScrapingResult scrape(Account account) {
         try {
-            authenticate(account);
-
-            HttpResponse<String> response = httpClient.send(
-                    HttpRequest.newBuilder(new URI(KRAMAIL_URL)).GET().build(),
-                    HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)
-            );
-
-            if (response.statusCode() >= 400) {
-                throw new ScrapingException("Failed to fetch kramail page with status: " + response.statusCode());
-            }
-
+            HttpResponse<String> response = executeWithAuth(KRAMAIL_URL, account);
             String body = response.body();
             boolean hasNotification = parser.hasNotification(body);
 
@@ -84,42 +74,63 @@ public class KralandScrapingAdapter implements KralandScrapingPort {
         }
     }
 
-    private void authenticate(Account account) throws Exception {
-        HttpResponse<String> testResponse = httpClient.send(
-                HttpRequest.newBuilder(new URI(KRAMAIL_URL)).GET().build(),
+    private void performAuthentication(Account account) throws Exception {
+        LOGGER.debug("Performing authentication...");
+
+        String body = "a=100&c%5B1%5D=" + URLEncoder.encode(account.username(), StandardCharsets.ISO_8859_1)
+                + "&c%5B2%5D=" + URLEncoder.encode(account.password(), StandardCharsets.ISO_8859_1)
+                + "&f%5B1%5D=1";
+
+        HttpRequest authRequest = HttpRequest.newBuilder(new URI(AUTH_URL))
+                .headers(
+                        "User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                        "Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+                        "Accept-Language", "fr,fr-FR;q=0.8,en-US;q=0.5,en;q=0.3",
+                        "Content-Type", "application/x-www-form-urlencoded",
+                        "Origin", "http://www.kraland.org",
+                        "Referer", "http://www.kraland.org/"
+                )
+                .POST(HttpRequest.BodyPublishers.ofString(body))
+                .build();
+
+        HttpResponse<String> authResponse = httpClient.send(
+                authRequest,
                 HttpResponse.BodyHandlers.ofString(StandardCharsets.ISO_8859_1)
         );
 
-        if (parser.requiresAuthentication(testResponse.body())) {
-            LOGGER.debug("Authentication required, logging in...");
-
-            String body = "a=100&c%5B1%5D=" + URLEncoder.encode(account.username(), StandardCharsets.ISO_8859_1)
-                    + "&c%5B2%5D=" + URLEncoder.encode(account.password(), StandardCharsets.ISO_8859_1)
-                    + "&f%5B1%5D=1";
-
-            HttpRequest authRequest = HttpRequest.newBuilder(new URI(AUTH_URL))
-                    .headers(
-                            "User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                            "Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-                            "Accept-Language", "fr,fr-FR;q=0.8,en-US;q=0.5,en;q=0.3",
-                            "Content-Type", "application/x-www-form-urlencoded",
-                            "Origin", "http://www.kraland.org",
-                            "Referer", "http://www.kraland.org/"
-                    )
-                    .POST(HttpRequest.BodyPublishers.ofString(body))
-                    .build();
-
-            HttpResponse<String> authResponse = httpClient.send(
-                    authRequest,
-                    HttpResponse.BodyHandlers.ofString(StandardCharsets.ISO_8859_1)
-            );
-
-            if (authResponse.statusCode() >= 400) {
-                throw new ScrapingException("Authentication failed with status: " + authResponse.statusCode());
-            }
-
-            LOGGER.debug("Authentication successful");
+        if (authResponse.statusCode() >= 400) {
+            throw new ScrapingException("Authentication failed with status: " + authResponse.statusCode());
         }
+
+        LOGGER.debug("Authentication successful");
+    }
+
+    /**
+     * Exécute une requête GET et gère automatiquement la ré-authentification si la session a expiré.
+     */
+    private HttpResponse<String> executeWithAuth(String url, Account account) throws Exception {
+        HttpRequest request = HttpRequest.newBuilder(new URI(url)).GET().build();
+        HttpResponse<String> response = httpClient.send(request,
+                HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+
+        if (response.statusCode() >= 400) {
+            throw new ScrapingException("Request failed with status: " + response.statusCode());
+        }
+
+        // Si la session a expiré, on s'authentifie et on réessaie
+        if (parser.requiresAuthentication(response.body())) {
+            LOGGER.debug("Session expired, re-authenticating...");
+            performAuthentication(account);
+
+            response = httpClient.send(request,
+                    HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+
+            if (response.statusCode() >= 400) {
+                throw new ScrapingException("Request failed after re-auth with status: " + response.statusCode());
+            }
+        }
+
+        return response;
     }
 
     private List<Kramail> scrapeAccountKramails(KralandHtmlParser.AccountInfo account) throws Exception {
@@ -138,17 +149,7 @@ public class KralandScrapingAdapter implements KralandScrapingPort {
     @Override
     public boolean isSleepAvailable(Account account) {
         try {
-            authenticate(account);
-
-            HttpResponse<String> response = httpClient.send(
-                    HttpRequest.newBuilder(new URI(PLATEAU_URL)).GET().build(),
-                    HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)
-            );
-
-            if (response.statusCode() >= 400) {
-                throw new ScrapingException("Failed to fetch plateau page with status: " + response.statusCode());
-            }
-
+            HttpResponse<String> response = executeWithAuth(PLATEAU_URL, account);
             boolean available = parser.isSleepButtonAvailable(response.body());
             LOGGER.debug("Sleep button available: {}", available);
             return available;
