@@ -22,6 +22,7 @@ services:
     ports:
       - 8080:8080
     environment:
+      TZ: Europe/Paris
       DISCORD_HOOK: <Url de votre webhook>
       KRALAND_USER: <Votre user kraland>
       KRALAND_PASSWORD: <Votre password kraland>
@@ -59,6 +60,20 @@ services:
 | `JOB_KRALAND_SCHEDULER_DELAY` | Délai avant le premier scan | `5m` |
 | `JOB_GITHUB_SCHEDULER_CRON` | Cron du scan GitHub | `0 0 11 ? * * *` (11h00) |
 | `JOB_SLEEP_SCHEDULER_TIME` | Heure du rappel de sommeil (format HH:mm) | `20:00` |
+| `TZ` | Fuseau horaire du conteneur | `UTC` |
+
+#### Fuseau horaire
+
+Les heures configurées (`JOB_SLEEP_SCHEDULER_TIME`, `JOB_GITHUB_SCHEDULER_CRON`) sont interprétées selon le fuseau horaire du système.
+
+Par défaut, les conteneurs Docker utilisent **UTC**. Pour utiliser l'heure de Paris :
+
+```yaml
+environment:
+  TZ: Europe/Paris
+```
+
+Liste des fuseaux horaires : [Wikipedia - List of tz database time zones](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)
 
 #### Format des durées Java
 
@@ -151,6 +166,8 @@ KrabotNotif peut vous rappeler de faire dormir votre personnage chaque jour.
 |----------|-------------|-------------------|
 | `JOB_SLEEP_SCHEDULER_TIME` | Heure de vérification (format HH:mm) | `20:00` |
 | `DISCORD_SLEEP_MESSAGE` | Message de rappel | `N'oublie pas de dormir` |
+
+> ⚠️ L'heure est interprétée selon le fuseau horaire du système. Voir la section [Fuseau horaire](#fuseau-horaire) pour configurer Docker.
 
 ### Userscript pour optimiser la vérification
 
