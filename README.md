@@ -57,6 +57,40 @@ services:
 | `JOB_KRALAND_SCHEDULER_DELAY` | Délai avant le premier scan | `5m` |
 | `JOB_GITHUB_SCHEDULER_CRON` | Cron du scan GitHub | `0 0 11 ? * * *` (11h00) |
 
+#### Format des durées Java
+
+Les variables `JOB_KRALAND_SCHEDULER_EVERY` et `JOB_KRALAND_SCHEDULER_DELAY` utilisent le format de durée Java :
+
+| Suffixe | Unité | Exemple |
+|---------|-------|---------|
+| `s` | secondes | `60s` = 60 secondes |
+| `m` | minutes | `5m` = 5 minutes |
+| `h` | heures | `2h` = 2 heures |
+| `d` | jours | `1d` = 1 jour |
+
+Ces suffixes peuvent être combinés : `1h30m` = 1 heure et 30 minutes.
+
+#### Format des expressions Cron
+
+Les variables `JOB_GITHUB_SCHEDULER_CRON` et `JOB_GC_SCHEDULER_CRON` utilisent le format cron Quartz (6-7 champs) :
+
+```
+secondes minutes heures jour-du-mois mois jour-de-la-semaine [année]
+```
+
+| Champ | Valeurs | Caractères spéciaux |
+|-------|---------|---------------------|
+| Secondes | 0-59 | `, - * /` |
+| Minutes | 0-59 | `, - * /` |
+| Heures | 0-23 | `, - * /` |
+| Jour du mois | 1-31 | `, - * ? /` |
+| Mois | 1-12 ou JAN-DEC | `, - * /` |
+| Jour de la semaine | 0-7 ou SUN-SAT | `, - * ? /` |
+
+Exemples :
+- `0 0 11 ? * * *` : tous les jours à 11h00
+- `0 0 * ? * *` : toutes les heures
+
 #### Template des kramails
 
 Pour `DISCORD_KRAMAIL_MESSAGE`, utilisez ces balises :
