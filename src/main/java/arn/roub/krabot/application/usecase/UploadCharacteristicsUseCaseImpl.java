@@ -34,4 +34,9 @@ public class UploadCharacteristicsUseCaseImpl implements UploadCharacteristicsUs
     public Optional<Integer> getUserPP(String namespaceApiKey, String playerId) {
         return repository.findByPlayerId(namespaceApiKey, playerId).map(Characteristic::pp);
     }
+
+    @Override
+    public Optional<Characteristic> getUser(String namespaceApiKey, String playerId) {
+        return repository.findByPlayerId(namespaceApiKey, playerId);
+    }
 }

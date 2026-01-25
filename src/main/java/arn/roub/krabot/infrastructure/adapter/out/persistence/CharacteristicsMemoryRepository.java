@@ -34,7 +34,7 @@ public class CharacteristicsMemoryRepository implements CharacteristicsPort {
         List<UserSummary> result = new ArrayList<>();
         if (map == null) return result;
         for (Characteristic c : map.values()) {
-            result.add(new UserSummary(c.playerId(), c.name()));
+            result.add(new UserSummary(c.playerId(), c.name(), c.pp()));
         }
         return result;
     }

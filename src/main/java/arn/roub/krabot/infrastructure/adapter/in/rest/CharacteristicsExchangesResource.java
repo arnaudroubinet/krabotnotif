@@ -14,7 +14,6 @@ import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -36,8 +35,8 @@ public class CharacteristicsExchangesResource {
     }
 
     public record UploadCharacteristicsRequest(String playerId, String name, int pp) {}
-    public record UserSummaryResponse(String playerId, String name) {}
-    public record GetCharacteristicsResponse(String playerId, String name, int pp) {}
+    // now include pp directly in the user summary response
+    public record UserSummaryResponse(String playerId, String name, int pp) {}
 
     @POST
     @Path("uploadCharacteristics")
@@ -58,20 +57,11 @@ public class CharacteristicsExchangesResource {
     public Response getUsers(@QueryParam("apiKey") String apiKey) {
         String namespace = (apiKey == null) ? "default" : apiKey;
         List<UserSummary> users = uploadUseCase.getUsers(namespace);
-        List<UserSummaryResponse> resp = users.stream().map(u -> new UserSummaryResponse(u.playerId(), u.name())).collect(Collectors.toList());
+        // Map to response including PP — assume UserSummary exposes pp()
+        List<UserSummaryResponse> resp = users.stream()
+                .map(u -> new UserSummaryResponse(u.playerId(), u.name(), u.pp()))
+                .collect(Collectors.toList());
         return Response.ok(resp).build();
-    }
-
-    @GET
-    @Path("getUserCharacteristics")
-    public Response getUserCharacteristics(@QueryParam("apiKey") String apiKey, @QueryParam("playerId") String playerId) {
-        String namespace = (apiKey == null) ? "default" : apiKey;
-        if (playerId == null || playerId.trim().isEmpty()) {
-            return Response.status(Response.Status.BAD_REQUEST).entity("playerId is required").build();
-        }
-        Optional<Integer> pp = uploadUseCase.getUserPP(namespace, playerId);
-        if (pp.isEmpty()) return Response.status(Response.Status.NOT_FOUND).build();
-        return Response.ok(new GetCharacteristicsResponse(playerId, "", pp.get())).build();
     }
 
     @GET

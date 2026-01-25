@@ -1,6 +1,7 @@
 package arn.roub.krabot.domain.port.in;
 
 import arn.roub.krabot.domain.model.UserSummary;
+import arn.roub.krabot.domain.model.Characteristic;
 
 import java.util.List;
 import java.util.Optional;
@@ -15,4 +16,7 @@ public interface UploadCharacteristicsUseCase {
     List<UserSummary> getUsers(String namespaceApiKey);
 
     Optional<Integer> getUserPP(String namespaceApiKey, String playerId);
+
+    // Retourne l'objet Characteristic complet (playerId, name, pp, updatedAt) si présent
+    Optional<Characteristic> getUser(String namespaceApiKey, String playerId);
 }
