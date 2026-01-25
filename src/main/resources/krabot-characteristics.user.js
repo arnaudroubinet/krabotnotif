@@ -99,7 +99,23 @@
     // Expose debug helpers
     try { if (typeof window !== 'undefined') { window.__krabot = window.__krabot || {}; window.__krabot.extract = extract; window.__krabot.trySend = trySend; window.__krabot.getSnapshotKey = getSnapshotKey; } } catch(e) {}
 
-    if (location.pathname.includes('/jouer/plateau')) { const btn = document.createElement('button'); btn.innerText = 'Send characteristics'; btn.style.position = 'fixed'; btn.style.bottom = '10px'; btn.style.right = '10px'; btn.style.zIndex = 9999; btn.onclick = () => { const d = extract(); console.log('extracted', d); trySend(d); }; document.body.appendChild(btn); }
+    // On plateau page: perform one immediate extract and send only when necessary
+    if (location.pathname.includes('/jouer/plateau')) {
+        try {
+            const d = extract();
+            const snap = loadSnapshot();
+            // send if no snapshot or if the detected values differ from the snapshot
+            if (!snap) {
+                console.log('[Krabot] no snapshot found — sending initial data', d);
+                trySend(d);
+            } else if (snap.playerId !== d.playerId || snap.name !== d.name || snap.pp !== d.pp) {
+                console.log('[Krabot] change detected vs snapshot — updating', { from: snap, to: d });
+                trySend(d);
+            } else {
+                console.log('[Krabot] snapshot up-to-date — no initial send');
+            }
+        } catch (e) { console.error('[Krabot] failed to perform initial plateau send', e); }
+    }
 
     if (location.pathname.includes('/profil/interface')) {
         (function initPanelSimple(){
@@ -196,10 +212,6 @@
             let attempts = 0; const max = 30; const iv = setInterval(()=>{ if (tryCreate() || ++attempts>=max) clearInterval(iv); }, 300);
         })();
     }
-
-    // initial extraction and send when script loads
-    const initialData = extract();
-    console.log('initial extract', initialData);
 
     // periodic refresh: re-extract and send if changed
     setInterval(() => {
