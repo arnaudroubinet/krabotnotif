@@ -2,14 +2,14 @@ package arn.roub.krabot.application.usecase;
 
 import arn.roub.krabot.domain.model.Characteristic;
 import arn.roub.krabot.domain.model.UserSummary;
-import arn.roub.krabot.domain.port.in.UploadCaracteristiquesUseCase;
+import arn.roub.krabot.domain.port.in.UploadCharacteristicsUseCase;
 import arn.roub.krabot.domain.port.out.CharacteristicsPort;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
-public class UploadCharacteristicsUseCaseImpl implements UploadCaracteristiquesUseCase {
+public class UploadCharacteristicsUseCaseImpl implements UploadCharacteristicsUseCase {
 
     private final CharacteristicsPort repository;
 

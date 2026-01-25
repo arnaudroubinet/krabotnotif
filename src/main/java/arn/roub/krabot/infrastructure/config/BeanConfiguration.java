@@ -5,11 +5,13 @@ import arn.roub.krabot.application.usecase.CheckKramailsUseCaseImpl;
 import arn.roub.krabot.application.usecase.CheckReleaseUseCaseImpl;
 import arn.roub.krabot.application.usecase.CheckSleepUseCaseImpl;
 import arn.roub.krabot.application.usecase.GetCurrentStateUseCaseImpl;
+import arn.roub.krabot.application.usecase.UploadCharacteristicsUseCaseImpl;
 import arn.roub.krabot.domain.model.Account;
 import arn.roub.krabot.domain.port.in.CheckKramailsUseCase;
 import arn.roub.krabot.domain.port.in.CheckReleaseUseCase;
 import arn.roub.krabot.domain.port.in.CheckSleepUseCase;
 import arn.roub.krabot.domain.port.in.GetCurrentStateUseCase;
+import arn.roub.krabot.domain.port.in.UploadCharacteristicsUseCase;
 import arn.roub.krabot.domain.port.out.GithubReleasePort;
 import arn.roub.krabot.domain.port.out.KralandScrapingPort;
 import arn.roub.krabot.domain.port.out.NotificationPort;
@@ -148,5 +150,17 @@ public class BeanConfiguration {
             );
         }
         return notificationOrchestrator;
+    }
+
+    @Produces
+    @ApplicationScoped
+    public arn.roub.krabot.domain.port.out.CharacteristicsPort characteristicsRepository() {
+        return new arn.roub.krabot.infrastructure.adapter.out.persistence.CharacteristicsMemoryRepository();
+    }
+
+    @Produces
+    @ApplicationScoped
+    public UploadCharacteristicsUseCase uploadCharacteristicsUseCase(arn.roub.krabot.domain.port.out.CharacteristicsPort repo) {
+        return new UploadCharacteristicsUseCaseImpl(repo);
     }
 }
