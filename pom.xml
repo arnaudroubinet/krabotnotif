@@ -91,20 +91,9 @@
 
     <build>
         <resources>
-            <!-- Resource with filtering enabled only for the userscript so ${project.version} is substituted -->
-            <resource>
-                <directory>src/main/resources</directory>
-                <includes>
-                    <include>krabot-characteristics.user.js</include>
-                </includes>
-                <filtering>true</filtering>
-            </resource>
             <!-- default resources (non-filtered) -->
             <resource>
                 <directory>src/main/resources</directory>
-                <excludes>
-                    <exclude>krabot-characteristics.user.js</exclude>
-                </excludes>
                 <filtering>false</filtering>
             </resource>
         </resources>
@@ -162,6 +151,19 @@
                 <version>${compiler-plugin.version}</version>
                 <configuration>
                     <parameters>true</parameters>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.4.2</version>
+                <configuration>
+                    <archive>
+                        <manifestEntries>
+                            <Implementation-Title>${project.artifactId}</Implementation-Title>
+                            <Implementation-Version>${project.version}</Implementation-Version>
+                        </manifestEntries>
+                    </archive>
                 </configuration>
             </plugin>
             <plugin>
