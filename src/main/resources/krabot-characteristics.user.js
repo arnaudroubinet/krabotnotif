@@ -98,7 +98,7 @@
         let name = null;
         try {
             const titleEl = document.querySelector('#col-left .list-group .list-group-item.active');
-            name = titleEl.textContent.trim();
+            name = titleEl.innerText.replace('×','').trim();
             console.info('[Krabot] name extracted from plateau: ' + name);
         } catch (e) {
             name = null;
@@ -127,7 +127,28 @@
             console.info('[Krabot] PP extracted from plateau: ' + pp);
         } catch (e) {
             pp = null;
-            console.error('[Krabot] failed to extract PP from plateau', e);
+
+            try {
+                const labels = Array.from(document.querySelectorAll('.mobile-gauge-compact-label'));
+                for (const lbl of labels) {
+                    const txt = (lbl.textContent || '').trim().toUpperCase();
+                    if (txt === 'PP' || txt.startsWith('PP') || txt.includes('PUISSANCE')) {
+                        const firstSibling = lbl.nextElementSibling; // usually the .mobile-gauge-compact-bar
+                        const secondSibling = firstSibling && firstSibling.nextElementSibling ? firstSibling.nextElementSibling : null;
+                        if (secondSibling && secondSibling.classList && secondSibling.classList.contains('mobile-gauge-compact-value')) {
+                            const v = (secondSibling.textContent || '').trim().replace(/\D/g, '');
+                            if (v.length) {
+                                pp = parseInt(v, 10);
+                                console.info('[Krabot] PP extracted from plateau (mobile-gauge fallback): ' + pp);
+                            }
+                        }
+                        break;
+                    }
+                }
+            } catch (ee) {
+                console.error('[Krabot] failed to extract PP from plateau (tooltip)', e);
+                console.error('[Krabot] failed to extract PP from plateau (mobile-gauge fallback)', ee);
+            }
         }
 
         return {playerId, name, pp};
