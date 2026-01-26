@@ -90,6 +90,24 @@
     </dependencies>
 
     <build>
+        <resources>
+            <!-- Resource with filtering enabled only for the userscript so ${project.version} is substituted -->
+            <resource>
+                <directory>src/main/resources</directory>
+                <includes>
+                    <include>krabot-characteristics.user.js</include>
+                </includes>
+                <filtering>true</filtering>
+            </resource>
+            <!-- default resources (non-filtered) -->
+            <resource>
+                <directory>src/main/resources</directory>
+                <excludes>
+                    <exclude>krabot-characteristics.user.js</exclude>
+                </excludes>
+                <filtering>false</filtering>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>io.github.git-commit-id</groupId>

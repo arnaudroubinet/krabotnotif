@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Krabot Characteristics Extractor
 // @namespace    krabot
-// @version      1
+// @version      ${project.version}
 // @description  Extract character name, playerId and PP and POST to backend only when changed
 // @match        *://www.kraland.org/jouer/plateau
 // @match        *://www.kraland.org/profil/interface
@@ -20,160 +20,149 @@
     function getApiKey() { return localStorage.getItem(API_KEY_STORAGE); }
     function getSnapshotKey() { const k = getApiKey(); return 'krabot_snapshot_' + (k ? k : 'default'); }
 
+    // Snapshot storage with TTL (1 hour)
+    const SNAPSHOT_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+    // Detect mobile devices (userAgent OR small viewport)
+    function isMobileDevice() {
+        try {
+            const ua = (navigator && navigator.userAgent) ? navigator.userAgent : '';
+            const uaMobile = /Mobi|Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+            const smallViewport = (window.matchMedia && window.matchMedia('(max-width:767px)').matches) || false;
+            return !!(uaMobile || smallViewport);
+        } catch (e) { return false; }
+    }
+
     function loadSnapshot() {
-        try { const raw = localStorage.getItem(getSnapshotKey()); return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
+        const key = getSnapshotKey();
+        try {
+            const raw = localStorage.getItem(key);
+            if (!raw) return null;
+            let parsed;
+            try {
+                parsed = JSON.parse(raw);
+            } catch (e) {
+                // invalid JSON -> remove the stored item
+                try { localStorage.removeItem(key); } catch (_) {}
+                return null;
+            }
+            // Expecting stored shape: { data: {...}, savedAt: 123456789 }
+            if (!parsed || typeof parsed !== 'object' || !parsed.hasOwnProperty('savedAt') || parsed.data === undefined) {
+                // incompatible shape -> remove it
+                try { localStorage.removeItem(key); } catch (_) {}
+                return null;
+            }
+            const savedAt = Number(parsed.savedAt) || 0;
+            const age = Date.now() - savedAt;
+            if (age <= SNAPSHOT_TTL_MS && savedAt > 0) return parsed.data;
+            // expired or invalid savedAt -> remove and return null
+            try { localStorage.removeItem(key); } catch (_) {}
+            return null;
+        } catch (e) {
+            // unexpected error -> attempt to remove and return null
+            try { localStorage.removeItem(getSnapshotKey()); } catch (_) {}
+            return null;
+        }
     }
 
     function saveSnapshot(snapshot) {
-        try { localStorage.setItem(getSnapshotKey(), JSON.stringify(snapshot)); } catch(e) { console.error('Failed to save snapshot', e); }
+        try {
+            const payload = { data: snapshot, savedAt: Date.now() };
+            localStorage.setItem(getSnapshotKey(), JSON.stringify(payload));
+        } catch(e) { console.error('Failed to save snapshot', e); }
     }
 
-    function extract() {
-        const container = document.querySelector('div.col-md-3.sidebar') || document.querySelector('#content') || document.body;
+    function extractPlateau() {
+        // Simple extraction for plateau: name, playerId, pp (desktop-only)
         let name = '';
-        if (container) {
-            // Temporarily hide our injected panel so its heading won't be picked up by heuristics
-            const panel = document.querySelector('.krabot-panel');
-            const prevVis = panel ? panel.style.visibility : null;
-            if (panel) panel.style.visibility = 'hidden';
-            try {
-                // 1) Prefer explicit mobile selector when present (more reliable on mobile)
-                const mobileNameEl = document.querySelector('.mobile-mini-profile-name');
-                if (mobileNameEl && (mobileNameEl.innerText || '').trim()) {
-                    // normalize NBSP, remove leading non-letter chars (e.g. '[', ';', '('),
-                    // and collapse multiple spaces — preserves multi-part names (2..4 parts)
-                    const raw = (mobileNameEl.innerText || '').replace(/\u00A0/g, ' ').trim();
-                    name = raw.replace(/^[^A-Za-zÀ-ÖØ-öø-ÿ]+/, '').replace(/\s+/g, ' ').trim();
-                } else {
-                    // 1.b) Desktop explicit: take first div.list-group then the first span inside it
-                    try {
-                        const listGroup = document.querySelector('div.list-group');
-                        if (listGroup) {
-                            const span = listGroup.querySelector('span');
-                            if (span && (span.innerText || '').trim()) {
-                                const raw = (span.innerText || '').replace(/\u00A0/g, ' ').trim();
-                                name = raw.replace(/^[^A-Za-zÀ-ÖØ-öø-ÿ]+/, '').replace(/\s+/g, ' ').trim();
-                            }
-                        }
-                    } catch(e) { /* ignore and fallback */ }
 
-                    // 2) Fallback to scanning text lines but with a more tolerant heuristic:
-                    //    - Accept 2..4 name parts (e.g. "Jean Pierre Dupont", "A B C D")
-                    //    - Ignore leading non-letter characters like '[', ';', '('
-                    if (!name) {
-                        const lines = container.innerText.split(/\n+/).map(s => s.trim()).filter(Boolean);
-                        const nameRegex = /([A-Za-zÀ-ÖØ-öø-ÿ]+(?:[ '\u00A0-][A-Za-zÀ-ÖØ-öø-ÿ]+){1,3})/;
-                        for (const l of lines) {
-                            // remove leading punctuation/non-letter characters that sometimes precede the name
-                            const cleaned = l.replace(/^[^A-Za-zÀ-ÖØ-öø-ÿ]+/, '').trim();
-                            const m = cleaned.match(nameRegex);
-                            if (m && m[1] && cleaned.length < 80) { name = m[1].trim(); break; }
-                        }
-                    }
-                }
-            } finally {
-                if (panel) panel.style.visibility = prevVis || '';
+        // name: read from list-group header (active span or first available)
+        try {
+            const span = document.querySelector('div.list-group span.list-group-item.active')
+                || document.querySelector('div.list-group span.list-group-item')
+                || document.querySelector('div.list-group span');
+            if (span && (span.innerText || '').trim()) {
+                name = (span.innerText || '').replace(/\u00A0/g, ' ').trim().replace(/^[^A-Za-zÀ-ÖØ-öø-ÿ]+/, '').replace(/\s+/g, ' ');
             }
-        }
+        } catch (e) { /* ignore */ }
 
+        // playerId: prefer community member anchors, otherwise profile anchors; take last numeric group
         let playerId = null;
-        const memberAnchors = Array.from(document.querySelectorAll('a[href*="communaute/membres/"]'));
-        for (const a of memberAnchors) {
-            const href = a.getAttribute('href') || '';
-            if (!href || href.includes('/edit')) continue;
-            try {
-                const dashMatches = Array.from(href.matchAll(/-([0-9]+)/g)).map(m => m[1]);
-                if (dashMatches.length) {
-                    const candidate = dashMatches.slice().reverse().find(s => s.length >= 3) || dashMatches[dashMatches.length - 1];
-                    if (candidate) { playerId = candidate; break; }
+        try {
+            const member = Array.from(document.querySelectorAll('a[href*="communaute/membres/"]'));
+            for (const a of member) {
+                const href = a.getAttribute('href') || '';
+                if (!href || href.includes('/edit')) continue;
+                const nums = (href.match(/([0-9]+)/g) || []);
+                if (nums.length) { playerId = nums[nums.length - 1]; break; }
+            }
+            if (!playerId) {
+                const profiles = Array.from(document.querySelectorAll('a[href*="/profil/"]'));
+                for (const a of profiles) {
+                    const href = a.getAttribute('href') || '';
+                    const nums = (href.match(/([0-9]+)/g) || []);
+                    if (nums.length) { playerId = nums[nums.length - 1]; break; }
                 }
-            } catch(e) { /* ignore */ }
-            const all = href.match(/([0-9]+)/g);
-            if (all && all.length) { playerId = all[all.length - 1]; break; }
-        }
-        if (!playerId) {
-            const profileAnchors = Array.from(document.querySelectorAll('a[href*="/profil/"]'));
-            for (const a of profileAnchors) { const href = a.getAttribute('href') || ''; const all = href.match(/([0-9]+)/g); if (all && all.length) { playerId = all[all.length - 1]; break; } }
-        }
+            }
+        } catch (e) { /* ignore */ }
 
-        // --- Robust PP extraction: rechercher un nombre explicitement lié au label 'PP' ---
+        // PP: find the anchor whose title starts with 'Puissance Politique' and extract last number from its visible text
         let pp = null;
         try {
-            // 1) Desktop : sélectionner les <a> qui ont title ou data-original-title exactement au format "PP <nombre>"
-            try {
-                const re = /^PP\s\d+$/; // exactement PP + espace + chiffres
-                const links = Array.from(document.querySelectorAll('a[title], a[data-original-title]'))
-                    .filter(a => re.test(((a.getAttribute('title') ?? a.getAttribute('data-original-title')) || '').trim()));
-                if (links.length) {
-                    const val = ((links[0].getAttribute('title') ?? links[0].getAttribute('data-original-title')) || '').trim();
-                    const m = val.match(/(\d+)/);
-                    if (m && m[1]) {
-                        const n = parseInt(m[1], 10);
-                        if (!Number.isNaN(n)) pp = n;
-                    }
-                }
-            } catch(e) {
-                // ne laisse pas une erreur desktop empêcher la suite
-                console.debug('[Krabot] PP desktop heuristic error', e);
-            }
-
-            // 2) Mobile : trouver un <span> dont le texte est exactement 'PP' et chercher le prochain <span> frère contenant un nombre
-            if (pp === null) {
-                try {
-                    const spans = Array.from(document.querySelectorAll('span'));
-                    for (let i = 0; i < spans.length; i++) {
-                        const txt = (spans[i].innerText || '').trim();
-                        if (txt === 'PP') {
-                            // parcourir les spans suivants (peut y avoir d'autres éléments entre les deux)
-                            for (let j = i + 1; j < spans.length; j++) {
-                                const candidate = (spans[j].innerText || '').trim();
-                                const mm = candidate.match(/(\d+)/);
-                                if (mm && mm[1]) {
-                                    const n = parseInt(mm[1], 10);
-                                    if (!Number.isNaN(n)) { pp = n; break; }
-                                }
-                            }
-                            if (pp !== null) break;
-                        }
-                    }
-                } catch(e) {
-                    console.debug('[Krabot] PP mobile heuristic error', e);
+            const anchors = Array.from(document.querySelectorAll('a[title]'));
+            const target = anchors.find(a => { const t = (a.getAttribute('title')||'').replace(/\u00A0/g,' ').trim(); return /^Puissance\s+Politique\b/i.test(t); });
+            if (target) {
+                const text = (target.innerText || '').replace(/\u00A0/g,' ').replace(/\s+/g,' ').trim();
+                const nums = text.match(/([0-9]+)/g);
+                if (nums && nums.length) {
+                    pp = parseInt(nums[nums.length - 1], 10);
+                    if (Number.isNaN(pp)) pp = null;
                 }
             }
+        } catch (e) { /* ignore */ }
 
-            // 3) Fallback : conserver les heuristiques existantes (recherche globale autour de 'PP' puis dans le body)
-            if (pp === null) {
-                const patterns = [ /([0-9]+)\s*PP\b/i, /\bPP[:\s]*\(?([0-9]+)\)?/i, /\bPP\b.*?([0-9]+)/i ];
+        return { name, playerId, pp };
+    }
 
-                // On cible d'abord les éléments qui contiennent la chaîne 'PP' (cas-insensible)
-                const ppCandidates = Array.from(document.querySelectorAll('*')).filter(e => (e.innerText || '').toUpperCase().includes('PP'));
-                for (const c of ppCandidates) {
-                    const text = (c.innerText || '').trim();
-                    for (const p of patterns) {
-                        const mm = text.match(p);
-                        if (mm && mm[1] !== undefined) {
-                            const n = parseInt(mm[1], 10);
-                            if (!Number.isNaN(n)) { pp = n; break; }
-                        }
-                    }
-                    if (pp !== null) break;
-                }
+    function extractInterface() {
+        // Simple extractor for /profil/interface: name, playerId, pp (desktop-only)
+        let name = '';
 
-                // fallback : analyser le texte complet de la page
-                if (pp === null) {
-                    const bodyText = (document.body && document.body.innerText) ? document.body.innerText : '';
-                    for (const p of patterns) {
-                        const mm = bodyText.match(p);
-                        if (mm && mm[1] !== undefined) {
-                            const n = parseInt(mm[1], 10);
-                            if (!Number.isNaN(n)) { pp = n; break; }
-                        }
-                    }
+        // name from list-group header
+        try {
+            const span = document.querySelector('div.list-group span.list-group-item.active')
+                || document.querySelector('div.list-group span.list-group-item')
+                || document.querySelector('div.list-group span');
+            if (span && (span.innerText || '').trim()) {
+                name = (span.innerText || '').replace(/\u00A0/g, ' ').trim().replace(/^[^A-Za-zÀ-ÖØ-öø-ÿ]+/, '').replace(/\s+/g, ' ');
+            }
+        } catch (e) { /* ignore */ }
+
+        // playerId: prefer profile anchors on interface page, take last numeric group
+        let playerId = null;
+        try {
+            const profileAnchors = Array.from(document.querySelectorAll('a[href*="/profil/"]'));
+            for (const a of profileAnchors) {
+                const href = a.getAttribute('href') || '';
+                const nums = (href.match(/([0-9]+)/g) || []);
+                if (nums.length) { playerId = nums[nums.length - 1]; break; }
+            }
+        } catch (e) { /* ignore */ }
+
+        // PP: find anchor with title starting 'Puissance Politique' and extract last visible number
+        let pp = null;
+        try {
+            const anchors = Array.from(document.querySelectorAll('a[title]'));
+            const target = anchors.find(a => { const t = (a.getAttribute('title')||'').replace(/\u00A0/g,' ').trim(); return /^Puissance\s+Politique\b/i.test(t); });
+            if (target) {
+                const text = (target.innerText || '').replace(/\u00A0/g,' ').replace(/\s+/g,' ').trim();
+                const nums = text.match(/([0-9]+)/g);
+                if (nums && nums.length) {
+                    pp = parseInt(nums[nums.length - 1], 10);
+                    if (Number.isNaN(pp)) pp = null;
                 }
             }
-        } catch (e) {
-            pp = null; // en cas d'erreur inattendue
-        }
+        } catch (e) { /* ignore */ }
 
         return { name, playerId, pp };
     }
@@ -200,25 +189,43 @@
         if (shouldSend(data)) { send(data); try { saveSnapshot({ playerId: data.playerId, name: data.name, pp: data.pp }); } catch(e) {} console.log('[Krabot] snapshot updated'); } else { console.log('[Krabot] no change detected, send ignored'); }
     }
 
-    // Expose debug helpers
-    try { if (typeof window !== 'undefined') { window.__krabot = window.__krabot || {}; window.__krabot.extract = extract; window.__krabot.trySend = trySend; window.__krabot.getSnapshotKey = getSnapshotKey; } } catch(e) {}
+    // Expose debug helpers (both extractors) and keep a convenience .extract that chooses by pathname
+    try {
+        if (typeof window !== 'undefined') {
+            window.__krabot = window.__krabot || {};
+            window.__krabot.extractPlateau = extractPlateau;
+            window.__krabot.extractInterface = extractInterface;
+            window.__krabot.trySend = trySend;
+            window.__krabot.getSnapshotKey = getSnapshotKey;
+            // convenience: choose extractor based on current path
+            window.__krabot.extract = function() {
+                if (location.pathname.includes('/jouer/plateau')) return extractPlateau();
+                if (location.pathname.includes('/profil/interface')) return extractInterface();
+                return extractPlateau();
+            };
+        }
+    } catch(e) {}
 
-    // On plateau page: perform one immediate extract and send only when necessary
+    // On plateau page: perform one immediate extract and send only when necessary (skip on mobile)
     if (location.pathname.includes('/jouer/plateau')) {
-        try {
-            const d = extract();
-            const snap = loadSnapshot();
-            // send if no snapshot or if the detected values differ from the snapshot
-            if (!snap) {
-                console.log('[Krabot] no snapshot found — sending initial data', d);
-                trySend(d);
-            } else if (snap.playerId !== d.playerId || snap.name !== d.name || snap.pp !== d.pp) {
-                console.log('[Krabot] change detected vs snapshot — updating', { from: snap, to: d });
-                trySend(d);
-            } else {
-                console.log('[Krabot] snapshot up-to-date — no initial send');
-            }
-        } catch (e) { console.error('[Krabot] failed to perform initial plateau send', e); }
+        if (isMobileDevice()) {
+            console.log('[Krabot] mobile detected — skipping automatic extraction/send on plateau');
+        } else {
+            try {
+                const d = extractPlateau();
+                const snap = loadSnapshot();
+                // send if no snapshot or if the detected values differ from the snapshot
+                if (!snap) {
+                    console.log('[Krabot] no snapshot found — sending initial data', d);
+                    trySend(d);
+                } else if (snap.playerId !== d.playerId || snap.name !== d.name || snap.pp !== d.pp) {
+                    console.log('[Krabot] change detected vs snapshot — updating', { from: snap, to: d });
+                    trySend(d);
+                } else {
+                    console.log('[Krabot] snapshot up-to-date — no initial send');
+                }
+            } catch (e) { console.error('[Krabot] failed to perform initial plateau send', e); }
+        }
     }
 
     if (location.pathname.includes('/profil/interface')) {
@@ -299,7 +306,16 @@
                             // no onclick detail behavior — list is informational only
                             listGroup.appendChild(item);
                         });
-                    } catch(e) { listGroup.innerHTML = '<div class="list-group-item text-danger">Erreur lors du chargement</div>'; }
+                    } catch(e) {
+                        // Provide a more informative, sanitized and truncated error message in the panel
+                        try { console.error('[Krabot] loadUsers error', e); } catch(_) {}
+                        const status = (e && (e.status || e.statusCode)) ? (e.status || e.statusCode) : 0;
+                        let body = (e && e.body) ? e.body : (typeof e === 'string' ? e : null);
+                        try { if (!body && e && e.responseText) body = e.responseText; } catch(_) {}
+                        try { if (body && typeof body !== 'string') body = JSON.stringify(body); } catch(_) { body = String(body); }
+                        body = body ? String(body).replace(/</g,'&lt;').slice(0,300) : 'no-body';
+                        listGroup.innerHTML = `<div class="list-group-item text-danger">Erreur lors du chargement (status: ${status}) — ${body}</div>`;
+                    }
                 };
                 refreshBtn.onclick = () => loadUsers();
 
@@ -317,11 +333,22 @@
         })();
     }
 
-    // periodic refresh: re-extract and send if changed
+    // periodic refresh: re-extract and send if changed (call the explicit extractor depending on page)
     setInterval(() => {
         try {
-            const d = extract();
-            if (d.playerId) {
+            if (isMobileDevice()) {
+                // skip periodic extraction/send on mobile
+                return;
+            }
+            let d = null;
+            if (location.pathname.includes('/jouer/plateau')) {
+                d = extractPlateau();
+            } else if (location.pathname.includes('/profil/interface')) {
+                d = extractInterface();
+            } else {
+                return; // not a page we care about
+            }
+            if (d && d.playerId) {
                 trySend(d);
             } else {
                 console.warn('Krabot: No playerId found during periodic refresh');
@@ -330,4 +357,4 @@
             console.error('Krabot: Error during periodic refresh', e);
         }
     }, 30000); // 30 seconds
-})();
+ })();
