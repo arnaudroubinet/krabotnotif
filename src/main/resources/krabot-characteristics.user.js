@@ -67,9 +67,40 @@
             for (const a of profileAnchors) { const href = a.getAttribute('href') || ''; const all = href.match(/([0-9]+)/g); if (all && all.length) { playerId = all[all.length - 1]; break; } }
         }
 
+        // --- Robust PP extraction: rechercher un nombre explicitement lié au label 'PP' ---
         let pp = null;
-        const ppCandidates = Array.from(document.querySelectorAll('*')).filter(e => (e.innerText || '').includes('PP'));
-        for (const c of ppCandidates) { const mm = (c.innerText || '').match(/([0-9]+)/); if (mm) { pp = parseInt(mm[1], 10); break; } }
+        try {
+            // patterns cherchant une valeur directement associée à "PP"
+            const patterns = [ /([0-9]+)\s*PP\b/i, /\bPP[:\s]*\(?([0-9]+)\)?/i, /\bPP\b.*?([0-9]+)/i ];
+
+            // On cible d'abord les éléments qui contiennent la chaîne 'PP' (cas-insensible)
+            const ppCandidates = Array.from(document.querySelectorAll('*')).filter(e => (e.innerText || '').toUpperCase().includes('PP'));
+            for (const c of ppCandidates) {
+                const text = (c.innerText || '').trim();
+                for (const p of patterns) {
+                    const mm = text.match(p);
+                    if (mm && mm[1] !== undefined) {
+                        const n = parseInt(mm[1], 10);
+                        if (!Number.isNaN(n)) { pp = n; break; }
+                    }
+                }
+                if (pp !== null) break;
+            }
+
+            // fallback : analyser le texte complet de la page
+            if (pp === null) {
+                const bodyText = (document.body && document.body.innerText) ? document.body.innerText : '';
+                for (const p of patterns) {
+                    const mm = bodyText.match(p);
+                    if (mm && mm[1] !== undefined) {
+                        const n = parseInt(mm[1], 10);
+                        if (!Number.isNaN(n)) { pp = n; break; }
+                    }
+                }
+            }
+        } catch (e) {
+            pp = null; // en cas d'erreur inattendue
+        }
 
         return { name, playerId, pp };
     }

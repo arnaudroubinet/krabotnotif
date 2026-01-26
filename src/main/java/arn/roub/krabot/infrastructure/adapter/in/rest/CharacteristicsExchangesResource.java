@@ -41,7 +41,11 @@ public class CharacteristicsExchangesResource {
     @POST
     @Path("uploadCharacteristics")
     public Response uploadCharacteristics(@QueryParam("apiKey") String apiKey, UploadCharacteristicsRequest request) {
-        String namespace = (apiKey == null) ? "default" : apiKey;
+        // apiKey is mandatory
+        if (apiKey == null || apiKey.trim().isEmpty()) {
+            return Response.status(Response.Status.UNAUTHORIZED).entity("apiKey is required").build();
+        }
+        String namespace = apiKey.trim();
         if (request == null || request.playerId() == null || request.playerId().trim().isEmpty()) {
             return Response.status(Response.Status.BAD_REQUEST).entity("playerId is required").build();
         }
@@ -55,7 +59,11 @@ public class CharacteristicsExchangesResource {
     @GET
     @Path("getUsers")
     public Response getUsers(@QueryParam("apiKey") String apiKey) {
-        String namespace = (apiKey == null) ? "default" : apiKey;
+        // apiKey is mandatory
+        if (apiKey == null || apiKey.trim().isEmpty()) {
+            return Response.status(Response.Status.UNAUTHORIZED).entity("apiKey is required").build();
+        }
+        String namespace = apiKey.trim();
         List<UserSummary> users = uploadUseCase.getUsers(namespace);
         // Map to response including PP — assume UserSummary exposes pp()
         List<UserSummaryResponse> resp = users.stream()
@@ -85,8 +93,8 @@ public class CharacteristicsExchangesResource {
 
     private String extractHost(String url) {
         try {
-            java.net.URL u = new java.net.URL(url);
-            return u.getProtocol() + "://" + u.getHost() + (u.getPort() != -1 ? ":" + u.getPort() : "");
+            java.net.URI u = java.net.URI.create(url);
+            return u.getScheme() + "://" + u.getHost() + (u.getPort() != -1 ? ":" + u.getPort() : "");
         } catch (Exception e) {
             return url; // fallback to original if parsing fails
         }
