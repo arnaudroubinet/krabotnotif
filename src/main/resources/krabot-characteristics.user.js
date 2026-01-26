@@ -37,10 +37,39 @@
             const prevVis = panel ? panel.style.visibility : null;
             if (panel) panel.style.visibility = 'hidden';
             try {
-                const lines = container.innerText.split(/\n+/).map(s => s.trim()).filter(Boolean);
-                for (const l of lines) {
-                    // look for a line starting with letter and containing a space (first and last name)
-                    if (/^[A-Za-zÀ-ÖØ-öø-ÿ].+ .+$/.test(l) && l.length < 60) { name = l; break; }
+                // 1) Prefer explicit mobile selector when present (more reliable on mobile)
+                const mobileNameEl = document.querySelector('.mobile-mini-profile-name');
+                if (mobileNameEl && (mobileNameEl.innerText || '').trim()) {
+                    // normalize NBSP, remove leading non-letter chars (e.g. '[', ';', '('),
+                    // and collapse multiple spaces — preserves multi-part names (2..4 parts)
+                    const raw = (mobileNameEl.innerText || '').replace(/\u00A0/g, ' ').trim();
+                    name = raw.replace(/^[^A-Za-zÀ-ÖØ-öø-ÿ]+/, '').replace(/\s+/g, ' ').trim();
+                } else {
+                    // 1.b) Desktop explicit: take first div.list-group then the first span inside it
+                    try {
+                        const listGroup = document.querySelector('div.list-group');
+                        if (listGroup) {
+                            const span = listGroup.querySelector('span');
+                            if (span && (span.innerText || '').trim()) {
+                                const raw = (span.innerText || '').replace(/\u00A0/g, ' ').trim();
+                                name = raw.replace(/^[^A-Za-zÀ-ÖØ-öø-ÿ]+/, '').replace(/\s+/g, ' ').trim();
+                            }
+                        }
+                    } catch(e) { /* ignore and fallback */ }
+
+                    // 2) Fallback to scanning text lines but with a more tolerant heuristic:
+                    //    - Accept 2..4 name parts (e.g. "Jean Pierre Dupont", "A B C D")
+                    //    - Ignore leading non-letter characters like '[', ';', '('
+                    if (!name) {
+                        const lines = container.innerText.split(/\n+/).map(s => s.trim()).filter(Boolean);
+                        const nameRegex = /([A-Za-zÀ-ÖØ-öø-ÿ]+(?:[ '\u00A0-][A-Za-zÀ-ÖØ-öø-ÿ]+){1,3})/;
+                        for (const l of lines) {
+                            // remove leading punctuation/non-letter characters that sometimes precede the name
+                            const cleaned = l.replace(/^[^A-Za-zÀ-ÖØ-öø-ÿ]+/, '').trim();
+                            const m = cleaned.match(nameRegex);
+                            if (m && m[1] && cleaned.length < 80) { name = m[1].trim(); break; }
+                        }
+                    }
                 }
             } finally {
                 if (panel) panel.style.visibility = prevVis || '';
@@ -70,31 +99,75 @@
         // --- Robust PP extraction: rechercher un nombre explicitement lié au label 'PP' ---
         let pp = null;
         try {
-            // patterns cherchant une valeur directement associée à "PP"
-            const patterns = [ /([0-9]+)\s*PP\b/i, /\bPP[:\s]*\(?([0-9]+)\)?/i, /\bPP\b.*?([0-9]+)/i ];
-
-            // On cible d'abord les éléments qui contiennent la chaîne 'PP' (cas-insensible)
-            const ppCandidates = Array.from(document.querySelectorAll('*')).filter(e => (e.innerText || '').toUpperCase().includes('PP'));
-            for (const c of ppCandidates) {
-                const text = (c.innerText || '').trim();
-                for (const p of patterns) {
-                    const mm = text.match(p);
-                    if (mm && mm[1] !== undefined) {
-                        const n = parseInt(mm[1], 10);
-                        if (!Number.isNaN(n)) { pp = n; break; }
+            // 1) Desktop : sélectionner les <a> qui ont title ou data-original-title exactement au format "PP <nombre>"
+            try {
+                const re = /^PP\s\d+$/; // exactement PP + espace + chiffres
+                const links = Array.from(document.querySelectorAll('a[title], a[data-original-title]'))
+                    .filter(a => re.test(((a.getAttribute('title') ?? a.getAttribute('data-original-title')) || '').trim()));
+                if (links.length) {
+                    const val = ((links[0].getAttribute('title') ?? links[0].getAttribute('data-original-title')) || '').trim();
+                    const m = val.match(/(\d+)/);
+                    if (m && m[1]) {
+                        const n = parseInt(m[1], 10);
+                        if (!Number.isNaN(n)) pp = n;
                     }
                 }
-                if (pp !== null) break;
+            } catch(e) {
+                // ne laisse pas une erreur desktop empêcher la suite
+                console.debug('[Krabot] PP desktop heuristic error', e);
             }
 
-            // fallback : analyser le texte complet de la page
+            // 2) Mobile : trouver un <span> dont le texte est exactement 'PP' et chercher le prochain <span> frère contenant un nombre
             if (pp === null) {
-                const bodyText = (document.body && document.body.innerText) ? document.body.innerText : '';
-                for (const p of patterns) {
-                    const mm = bodyText.match(p);
-                    if (mm && mm[1] !== undefined) {
-                        const n = parseInt(mm[1], 10);
-                        if (!Number.isNaN(n)) { pp = n; break; }
+                try {
+                    const spans = Array.from(document.querySelectorAll('span'));
+                    for (let i = 0; i < spans.length; i++) {
+                        const txt = (spans[i].innerText || '').trim();
+                        if (txt === 'PP') {
+                            // parcourir les spans suivants (peut y avoir d'autres éléments entre les deux)
+                            for (let j = i + 1; j < spans.length; j++) {
+                                const candidate = (spans[j].innerText || '').trim();
+                                const mm = candidate.match(/(\d+)/);
+                                if (mm && mm[1]) {
+                                    const n = parseInt(mm[1], 10);
+                                    if (!Number.isNaN(n)) { pp = n; break; }
+                                }
+                            }
+                            if (pp !== null) break;
+                        }
+                    }
+                } catch(e) {
+                    console.debug('[Krabot] PP mobile heuristic error', e);
+                }
+            }
+
+            // 3) Fallback : conserver les heuristiques existantes (recherche globale autour de 'PP' puis dans le body)
+            if (pp === null) {
+                const patterns = [ /([0-9]+)\s*PP\b/i, /\bPP[:\s]*\(?([0-9]+)\)?/i, /\bPP\b.*?([0-9]+)/i ];
+
+                // On cible d'abord les éléments qui contiennent la chaîne 'PP' (cas-insensible)
+                const ppCandidates = Array.from(document.querySelectorAll('*')).filter(e => (e.innerText || '').toUpperCase().includes('PP'));
+                for (const c of ppCandidates) {
+                    const text = (c.innerText || '').trim();
+                    for (const p of patterns) {
+                        const mm = text.match(p);
+                        if (mm && mm[1] !== undefined) {
+                            const n = parseInt(mm[1], 10);
+                            if (!Number.isNaN(n)) { pp = n; break; }
+                        }
+                    }
+                    if (pp !== null) break;
+                }
+
+                // fallback : analyser le texte complet de la page
+                if (pp === null) {
+                    const bodyText = (document.body && document.body.innerText) ? document.body.innerText : '';
+                    for (const p of patterns) {
+                        const mm = bodyText.match(p);
+                        if (mm && mm[1] !== undefined) {
+                            const n = parseInt(mm[1], 10);
+                            if (!Number.isNaN(n)) { pp = n; break; }
+                        }
                     }
                 }
             }
