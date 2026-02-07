@@ -22,10 +22,29 @@ public class KralandHtmlParser {
 
     /**
      * Vérifie si la page contient une notification (report).
+     * Une notification est présente si le badge contient le caractère "!".
      */
     public boolean hasNotification(String html) {
         Document doc = Jsoup.parse(html);
-        return doc.select("i[class*=fa fa-bell]").next().getFirst().attributes().get("class").equals("badge badge-danger");
+        Elements bellIcons = doc.select("i.fa.fa-bell");
+
+        for (Element bellIcon : bellIcons) {
+            Element parent = bellIcon.parent();
+            if (parent != null) {
+                Elements badges = parent.select("span.badge.badge-danger");
+                for (Element badge : badges) {
+                    String badgeText = badge.text().trim();
+                    LOGGER.debug("Found notification badge with text: '{}'", badgeText);
+                    if ("!".equals(badgeText)) {
+                        LOGGER.info("Notification detected (badge contains '!')");
+                        return true;
+                    }
+                }
+            }
+        }
+
+        LOGGER.debug("No notification detected");
+        return false;
     }
 
     /**

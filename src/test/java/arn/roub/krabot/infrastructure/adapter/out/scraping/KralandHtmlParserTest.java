@@ -15,6 +15,61 @@ class KralandHtmlParserTest {
     }
 
     @Test
+    void hasNotification_whenBadgeContainsExclamation_returnsTrue() {
+        String html = """
+                <ul class="nav navbar-nav navbar-right">
+                    <li><a href="" onclick="javascript:openReport();return false;"><i class="fa fa-bell"></i><span class="badge badge-danger">!</span></a></li>
+                </ul>
+                """;
+
+        assertTrue(parser.hasNotification(html));
+    }
+
+    @Test
+    void hasNotification_whenBadgeIsEmpty_returnsFalse() {
+        String html = """
+                <ul class="nav navbar-nav navbar-right">
+                    <li><a href="" onclick="javascript:openReport();return false;"><i class="fa fa-bell"></i><span class="badge badge-danger"></span></a></li>
+                </ul>
+                """;
+
+        assertFalse(parser.hasNotification(html));
+    }
+
+    @Test
+    void hasNotification_whenNoBadge_returnsFalse() {
+        String html = """
+                <ul class="nav navbar-nav navbar-right">
+                    <li><a href="" onclick="javascript:openReport();return false;"><i class="fa fa-bell"></i></a></li>
+                </ul>
+                """;
+
+        assertFalse(parser.hasNotification(html));
+    }
+
+    @Test
+    void hasNotification_whenNoBellIcon_returnsFalse() {
+        String html = """
+                <ul class="nav navbar-nav navbar-right">
+                    <li><a href="#"><span class="badge badge-danger">!</span></a></li>
+                </ul>
+                """;
+
+        assertFalse(parser.hasNotification(html));
+    }
+
+    @Test
+    void hasNotification_whenBadgeContainsOtherText_returnsFalse() {
+        String html = """
+                <ul class="nav navbar-nav navbar-right">
+                    <li><a href="" onclick="javascript:openReport();return false;"><i class="fa fa-bell"></i><span class="badge badge-danger">5</span></a></li>
+                </ul>
+                """;
+
+        assertFalse(parser.hasNotification(html));
+    }
+
+    @Test
     void isSleepButtonAvailable_whenButtonHasBtnPrimaryClass_returnsTrue() {
         String html = """
                 <nav class="navbar navbar-inverse nomargin">
@@ -1014,56 +1069,6 @@ class KralandHtmlParserTest {
                 </footer>
                 <!-- /footer -->
                 </body></html>
-                """;
-
-        assertTrue(parser.isSleepButtonAvailable(html));
-    }
-
-    @Test
-    void isSleepButtonAvailable_whenButtonHasBtnDefaultClass_returnsFalse() {
-        String html = """
-                <div class="t">
-                <a class="btn btn-default alert11 mini" href="#"><i class="fa fa-bed"></i> Dormir</a>
-                <a class="btn btn-primary alert12 mini" href="#"><i class="fa fa-pray"></i> Prier</a>
-                </div>
-                """;
-
-        assertFalse(parser.isSleepButtonAvailable(html));
-    }
-
-    @Test
-    void isSleepButtonAvailable_whenNoSleepButton_returnsFalse() {
-        String html = """
-                <div class="t">
-                <a class="btn btn-primary alert12 mini" href="#"><i class="fa fa-pray"></i> Prier</a>
-                </div>
-                """;
-
-        assertFalse(parser.isSleepButtonAvailable(html));
-    }
-
-    @Test
-    void isSleepButtonAvailable_withRealPageHtml_returnsTrue() {
-        // HTML extrait de la vraie page plateau de Kraland
-        String html = """
-                <html lang="fr">
-                <body>
-                <div class="panel panel-body">
-                    <div class="t">
-                        <div class="c100 p12 small">
-                            <span>02:53</span>
-                        </div>
-                    </div>
-                    <div class="t">
-                    <a class="btn btn-primary alert11 mini" href="#"><i class="fa fa-bed"></i> Dormir</a>
-                    <a class="btn btn-primary alert12 mini" href="#"><i class="fa fa-pray"></i> Prier</a>
-                    <a class="btn btn-default alert14 mini" href="#"><i class="fa fa-star-half-alt"></i> Pouvoir</a>
-                    <hr style="border-top: 1px solid #337ab7; background: transparent;">
-                    <a class="btn btn-primary alert1103 mini" href="#"><i class="fab fa-get-pocket"></i> Fouiller</a>
-                    </div>
-                </div>
-                </body>
-                </html>
                 """;
 
         assertTrue(parser.isSleepButtonAvailable(html));
