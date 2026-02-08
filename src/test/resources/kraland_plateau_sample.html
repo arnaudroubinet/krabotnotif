@@ -1,0 +1,24 @@
+<ul class="nav navbar-nav navbar-right">
+    <li><a href="" onclick="javascript:openMap();return false;"><i class="fa fa-globe"></i></a></li>
+    <li><a href="" onclick="javascript:openReport();return false;"><i class="fa fa-bell"></i><span class="badge badge-danger">!</span></a></li>
+    <li><a href="kramail"><i class="fa fa-envelope"></i><span class="badge" id="badge"></span></a></li>
+    <li class="dropdown">
+        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false"><i class="fa fa-user"></i><span class="caret"></span></a>
+        <ul class="dropdown-menu" role="menu">
+            <form method="post" id="reconnect" action="reconnect">
+                <input type="hidden" name="t" value="ItwznipnPF3H3L3V4I4XeAkd/f+iq0FCmuV4tMHn8iU=">
+            </form>
+            <form method="post" id="exit" action="exit">
+                <input type="hidden" name="t" value="lGVCCbh8A4qSWvUsZATHyR0uBFFvh2QwaxZTcz+8kaI=">
+            </form>
+            <li><a href="communaute/membres/edit"><i class="fa fa-user"></i> Modifier profil</a></li>
+            <li><a href="profil/interface"><i class="fa fa-cog"></i> Paramètres</a></li>
+            <li><a href="contacts"><i class="fa fa-users"></i> Contacts</a></li>
+            <li><a href="profil/notes"><i class="fas fa-file-signature"></i> Notes</a></li>
+            <li><a href="aide"><i class="fa fa-medkit"></i> A l'aide !</a></li>
+            <li class="divider"></li>
+            <li><a href="javascript:document.getElementById('reconnect').submit();"><i class="fa fa-sync-alt"></i> Reconnexion</a></li>
+            <li><a href="javascript:document.getElementById('exit').submit();"><i class="fa fa-sign-out-alt"></i> Déconnexion</a></li>
+        </ul>
+    </li>
+</ul>

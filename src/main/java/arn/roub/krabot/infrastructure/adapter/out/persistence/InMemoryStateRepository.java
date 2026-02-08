@@ -86,4 +86,14 @@ public class InMemoryStateRepository implements StateRepositoryPort {
     public void markGeneralNotificationAsSent() {
         generalNotificationSent.set(true);
     }
+
+    @Override
+    public void resetGeneralNotificationState() {
+        generalNotificationSent.set(false);
+    }
+
+    @Override
+    public void resetKramailsNotificationState() {
+        notifiedKramails.clear();
+    }
 }

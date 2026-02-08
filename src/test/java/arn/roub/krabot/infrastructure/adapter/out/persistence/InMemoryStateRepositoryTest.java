@@ -162,4 +162,48 @@ class InMemoryStateRepositoryTest {
         assertEquals(3, newState.nbKramails());
         assertEquals("v2.0.0", newState.latestVersion().tag());
     }
+
+    @Test
+    @DisplayName("Should reset general notification state independently")
+    void shouldResetGeneralNotificationStateIndependently() {
+        // Given - Setup general notification and kramails
+        KramailId id1 = new KramailId("1");
+        repository.markKramailAsNotified(id1);
+        repository.markGeneralNotificationAsSent();
+
+        // Verify states are set
+        assertTrue(repository.isKramailAlreadyNotified(id1));
+        assertTrue(repository.isGeneralNotificationAlreadySent());
+
+        // When - Reset only general notification state
+        repository.resetGeneralNotificationState();
+
+        // Then - Only general notification should be reset, kramails unchanged
+        assertFalse(repository.isGeneralNotificationAlreadySent());
+        assertTrue(repository.isKramailAlreadyNotified(id1));
+    }
+
+    @Test
+    @DisplayName("Should reset kramails notification state independently")
+    void shouldResetKramailsNotificationStateIndependently() {
+        // Given - Setup general notification and kramails
+        KramailId id1 = new KramailId("1");
+        KramailId id2 = new KramailId("2");
+        repository.markKramailAsNotified(id1);
+        repository.markKramailAsNotified(id2);
+        repository.markGeneralNotificationAsSent();
+
+        // Verify states are set
+        assertTrue(repository.isKramailAlreadyNotified(id1));
+        assertTrue(repository.isKramailAlreadyNotified(id2));
+        assertTrue(repository.isGeneralNotificationAlreadySent());
+
+        // When - Reset only kramails notification state
+        repository.resetKramailsNotificationState();
+
+        // Then - Only kramails should be reset, general notification unchanged
+        assertFalse(repository.isKramailAlreadyNotified(id1));
+        assertFalse(repository.isKramailAlreadyNotified(id2));
+        assertTrue(repository.isGeneralNotificationAlreadySent());
+    }
 }

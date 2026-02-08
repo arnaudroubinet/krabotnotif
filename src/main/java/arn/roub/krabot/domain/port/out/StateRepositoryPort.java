@@ -77,4 +77,16 @@ public interface StateRepositoryPort {
      * Marque la notification générale comme envoyée.
      */
     void markGeneralNotificationAsSent();
+
+    /**
+     * Réinitialise l'état de la notification générale.
+     * Utilisé lors de la prolongation pour permettre une nouvelle notification générale.
+     */
+    void resetGeneralNotificationState();
+
+    /**
+     * Réinitialise tous les états des kramails notifiés.
+     * Utilisé lors de la prolongation pour permettre de nouvelles notifications de kramails.
+     */
+    void resetKramailsNotificationState();
 }

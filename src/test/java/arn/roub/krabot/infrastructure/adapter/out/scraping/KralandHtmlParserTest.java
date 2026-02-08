@@ -70,6 +70,38 @@ class KralandHtmlParserTest {
     }
 
     @Test
+    void hasNotification_whenRealHtmlWithNotificationAndNoKramail_returnsTrue() {
+        String html = """
+                <ul class="nav navbar-nav navbar-right">
+                    <li><a href="" onclick="javascript:openMap();return false;"><i class="fa fa-globe"></i></a></li>
+                    <li><a href="" onclick="javascript:openReport();return false;"><i class="fa fa-bell"></i><span class="badge badge-danger">!</span></a></li>
+                    <li><a href="kramail"><i class="fa fa-envelope"></i><span class="badge" id="badge"></span></a></li>
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false"><i class="fa fa-user"></i><span class="caret"></span></a>
+                    </li>
+                </ul>
+                """;
+
+        assertTrue(parser.hasNotification(html));
+    }
+
+    @Test
+    void hasNotification_whenRealHtmlWithoutNotificationButWithKramailBadge_returnsFalse() {
+        String html = """
+                <ul class="nav navbar-nav navbar-right">
+                    <li><a href="" onclick="javascript:openMap();return false;"><i class="fa fa-globe"></i></a></li>
+                    <li><a href="" onclick="javascript:openReport();return false;"><i class="fa fa-bell"></i><span class="badge badge-danger"></span></a></li>
+                    <li><a href="kramail"><i class="fa fa-envelope"></i><span class="badge" id="badge">3</span></a></li>
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false"><i class="fa fa-user"></i><span class="caret"></span></a>
+                    </li>
+                </ul>
+                """;
+
+        assertFalse(parser.hasNotification(html));
+    }
+
+    @Test
     void isSleepButtonAvailable_whenButtonHasBtnPrimaryClass_returnsTrue() {
         String html = """
                 <nav class="navbar navbar-inverse nomargin">

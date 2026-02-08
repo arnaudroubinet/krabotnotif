@@ -5,12 +5,16 @@ import arn.roub.krabot.application.usecase.CheckKramailsUseCaseImpl;
 import arn.roub.krabot.application.usecase.CheckReleaseUseCaseImpl;
 import arn.roub.krabot.application.usecase.CheckSleepUseCaseImpl;
 import arn.roub.krabot.application.usecase.GetCurrentStateUseCaseImpl;
+import arn.roub.krabot.application.usecase.ResetGeneralNotificationUseCaseImpl;
+import arn.roub.krabot.application.usecase.ResetKramailsNotificationUseCaseImpl;
 import arn.roub.krabot.application.usecase.UploadCharacteristicsUseCaseImpl;
 import arn.roub.krabot.domain.model.Account;
 import arn.roub.krabot.domain.port.in.CheckKramailsUseCase;
 import arn.roub.krabot.domain.port.in.CheckReleaseUseCase;
 import arn.roub.krabot.domain.port.in.CheckSleepUseCase;
 import arn.roub.krabot.domain.port.in.GetCurrentStateUseCase;
+import arn.roub.krabot.domain.port.in.ResetGeneralNotificationUseCase;
+import arn.roub.krabot.domain.port.in.ResetKramailsNotificationUseCase;
 import arn.roub.krabot.domain.port.in.UploadCharacteristicsUseCase;
 import arn.roub.krabot.domain.port.out.GithubReleasePort;
 import arn.roub.krabot.domain.port.out.KralandScrapingPort;
@@ -136,6 +140,18 @@ public class BeanConfiguration {
     @ApplicationScoped
     public GetCurrentStateUseCase getCurrentStateUseCase() {
         return new GetCurrentStateUseCaseImpl(stateRepositoryPort);
+    }
+
+    @Produces
+    @ApplicationScoped
+    public ResetGeneralNotificationUseCase resetGeneralNotificationUseCase() {
+        return new ResetGeneralNotificationUseCaseImpl(stateRepositoryPort);
+    }
+
+    @Produces
+    @ApplicationScoped
+    public ResetKramailsNotificationUseCase resetKramailsNotificationUseCase() {
+        return new ResetKramailsNotificationUseCaseImpl(stateRepositoryPort);
     }
 
     @Produces
