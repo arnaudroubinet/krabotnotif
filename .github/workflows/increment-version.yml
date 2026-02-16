@@ -171,7 +171,7 @@ jobs:
             --push .
 
       - name: Run Trivy vulnerability scanner for JVM image
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@0.34.0
         with:
           image-ref: 'arnaudroubinet/krabotnotif:${{ steps.calculate_version.outputs.new_tag }}'
           format: 'template'
@@ -180,7 +180,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
 
       - name: Run Trivy vulnerability scanner for native image
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@0.34.0
         with:
           image-ref: 'arnaudroubinet/krabotnotif:${{ steps.calculate_version.outputs.new_tag }}-native'
           format: 'template'
