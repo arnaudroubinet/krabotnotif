@@ -34,6 +34,7 @@ public class KramailCheckScheduler implements DelayKramailCheckUseCase {
 
     private ScheduledFuture<?> currentTask;
     private Instant nextExecutionTime;
+    private long scheduleGeneration = 0;
 
     public KramailCheckScheduler(
             CheckKramailsUseCase checkKramailsUseCase,
@@ -60,20 +61,29 @@ public class KramailCheckScheduler implements DelayKramailCheckUseCase {
     }
 
     private synchronized Instant scheduleNext(Duration delay) {
-        currentTask = executor.schedule(this::executeAndReschedule, delay.toMillis(), TimeUnit.MILLISECONDS);
+        long gen = ++scheduleGeneration;
+        currentTask = executor.schedule(() -> executeAndReschedule(gen), delay.toMillis(), TimeUnit.MILLISECONDS);
         nextExecutionTime = Instant.now().plus(delay);
-        LOGGER.debug("Next kramail check scheduled at {}", nextExecutionTime);
+        LOGGER.debug("Next kramail check scheduled at {} (generation {})", nextExecutionTime, gen);
         return nextExecutionTime;
     }
 
-    private void executeAndReschedule() {
+    private void executeAndReschedule(long generation) {
         try {
             checkKramailsUseCase.execute();
         } catch (RuntimeException e) {
             LOGGER.error("Error during kramail check: {}", e.getMessage());
             notificationOrchestrator.notifyError(e);
         }
-        scheduleNext(interval);
+        rescheduleIfCurrent(generation);
+    }
+
+    private synchronized void rescheduleIfCurrent(long generation) {
+        if (generation == scheduleGeneration) {
+            scheduleNext(interval);
+        } else {
+            LOGGER.debug("Skipping reschedule: generation {} is stale (current: {})", generation, scheduleGeneration);
+        }
     }
 
     @Override

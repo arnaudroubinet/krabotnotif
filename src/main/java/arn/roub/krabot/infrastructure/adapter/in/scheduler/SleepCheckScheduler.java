@@ -39,6 +39,7 @@ public class SleepCheckScheduler implements DelaySleepCheckUseCase {
 
     private ScheduledFuture<?> currentTask;
     private Instant nextExecutionTime;
+    private long scheduleGeneration = 0;
 
     public SleepCheckScheduler(
             CheckSleepUseCase checkSleepUseCase,
@@ -81,13 +82,14 @@ public class SleepCheckScheduler implements DelaySleepCheckUseCase {
     }
 
     private synchronized Instant scheduleNext(Duration delay) {
-        currentTask = executor.schedule(this::executeAndReschedule, delay.toMillis(), TimeUnit.MILLISECONDS);
+        long gen = ++scheduleGeneration;
+        currentTask = executor.schedule(() -> executeAndReschedule(gen), delay.toMillis(), TimeUnit.MILLISECONDS);
         nextExecutionTime = Instant.now().plus(delay);
-        LOGGER.info("Next sleep check scheduled at {} (in {})", nextExecutionTime, delay);
+        LOGGER.info("Next sleep check scheduled at {} (in {}, generation {})", nextExecutionTime, delay, gen);
         return nextExecutionTime;
     }
 
-    private void executeAndReschedule() {
+    private void executeAndReschedule(long generation) {
         LOGGER.info("Executing scheduled sleep check...");
         try {
             checkSleepUseCase.execute();
@@ -95,7 +97,15 @@ public class SleepCheckScheduler implements DelaySleepCheckUseCase {
             LOGGER.error("Error during sleep check: {}", e.getMessage());
             notificationOrchestrator.notifyError(e);
         }
-        scheduleNextExecution();
+        rescheduleIfCurrent(generation);
+    }
+
+    private synchronized void rescheduleIfCurrent(long generation) {
+        if (generation == scheduleGeneration) {
+            scheduleNextExecution();
+        } else {
+            LOGGER.debug("Skipping reschedule: generation {} is stale (current: {})", generation, scheduleGeneration);
+        }
     }
 
     @Override
