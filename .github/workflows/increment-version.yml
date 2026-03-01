@@ -192,14 +192,14 @@ jobs:
 
       - name: Upload Trivy JVM scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v4
-        if: always()
+        if: always() && hashFiles('trivy-results-jvm.sarif') != ''
         with:
           sarif_file: 'trivy-results-jvm.sarif'
           category: jvm-image
 
       - name: Upload Trivy native scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v4
-        if: always()
+        if: always() && hashFiles('trivy-results-native.sarif') != ''
         with:
           sarif_file: 'trivy-results-native.sarif'
           category: native-image
