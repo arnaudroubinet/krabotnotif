@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__plugin_serena_serena__list_memories",
+      "mcp__plugin_serena_serena__check_onboarding_performed",
+      "mcp__plugin_serena_serena__activate_project",
+      "mcp__plugin_serena_serena__onboarding",
+      "mcp__plugin_serena_serena__list_dir",
+      "mcp__plugin_serena_serena__find_file",
+      "mcp__plugin_serena_serena__search_for_pattern",
+      "mcp__plugin_serena_serena__get_symbols_overview",
+      "mcp__plugin_serena_serena__find_symbol",
+      "mcp__plugin_serena_serena__insert_after_symbol",
+      "mcp__plugin_serena_serena__replace_symbol_body",
+      "Bash(cd /c/dev/gitRepositories/krabotnotif && mvn test 2>&1)",
+      "mcp__plugin_playwright_playwright__browser_evaluate",
+      "Bash(./mvnw test:*)",
+      "mcp__plugin_playwright_playwright__browser_navigate",
+      "Bash(gh pr:*)",
+      "Bash(gh run:*)",
+      "Bash(gh api:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(perl -MMIME::Base64 -e 'local $/; my $data = <STDIN>; print decode_base64\\($data\\);')"
+    ]
+  }
+}
