@@ -57,14 +57,18 @@ public class KralandScrapingAdapter implements KralandScrapingPort {
             boolean hasNotification = parser.hasNotification(body);
 
             List<KralandHtmlParser.AccountInfo> accounts = parser.extractAccounts(body);
+            if (accounts.isEmpty()) {
+                LOGGER.warn("No kramail accounts found in sidebar. Page length: {}", body.length());
+            }
+
             List<Kramail> allKramails = new ArrayList<>();
 
             for (KralandHtmlParser.AccountInfo accountInfo : accounts) {
-                List<Kramail> kramails = scrapeAccountKramails(accountInfo);
+                List<Kramail> kramails = scrapeAccountKramails(accountInfo, account);
                 allKramails.addAll(kramails);
             }
 
-            LOGGER.debug("Found {} unread kramails across {} accounts", allKramails.size(), accounts.size());
+            LOGGER.info("Found {} unread kramails across {} accounts", allKramails.size(), accounts.size());
 
             return new ScrapingResult(allKramails, hasNotification);
         } catch (ScrapingException e) {
@@ -119,7 +123,7 @@ public class KralandScrapingAdapter implements KralandScrapingPort {
 
         // Si la session a expiré, on s'authentifie et on réessaie
         if (parser.requiresAuthentication(response.body())) {
-            LOGGER.debug("Session expired, re-authenticating...");
+            LOGGER.info("Session expired for {}, re-authenticating...", url);
             performAuthentication(account);
 
             response = httpClient.send(request,
@@ -128,22 +132,21 @@ public class KralandScrapingAdapter implements KralandScrapingPort {
             if (response.statusCode() >= 400) {
                 throw new ScrapingException("Request failed after re-auth with status: " + response.statusCode());
             }
+
+            if (parser.requiresAuthentication(response.body())) {
+                throw new ScrapingException("Authentication failed: still on login page after re-auth for " + url);
+            }
         }
 
         return response;
     }
 
-    private List<Kramail> scrapeAccountKramails(KralandHtmlParser.AccountInfo account) throws Exception {
-        HttpRequest request = HttpRequest.newBuilder(new URI(account.url())).GET().build();
-        HttpResponse<String> response = httpClient.send(request,
-                HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+    private List<Kramail> scrapeAccountKramails(KralandHtmlParser.AccountInfo accountInfo, Account account) throws Exception {
+        HttpResponse<String> response = executeWithAuth(accountInfo.url(), account);
 
-        if (response.statusCode() >= 400) {
-            LOGGER.warn("Failed to fetch account {} with status {}", account.name(), response.statusCode());
-            return List.of();
-        }
-
-        return parser.parseKramails(response.body());
+        List<Kramail> kramails = parser.parseKramails(response.body());
+        LOGGER.debug("Account '{}': found {} unread kramails", accountInfo.name(), kramails.size());
+        return kramails;
     }
 
     @Override
