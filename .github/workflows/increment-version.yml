@@ -174,8 +174,7 @@ jobs:
         uses: aquasecurity/trivy-action@0.34.1
         with:
           image-ref: 'arnaudroubinet/krabotnotif:${{ steps.calculate_version.outputs.new_tag }}'
-          format: 'template'
-          template: '@/contrib/sarif.tpl'
+          format: 'sarif'
           output: 'trivy-results-jvm.sarif'
           severity: 'CRITICAL,HIGH'
 
@@ -183,8 +182,7 @@ jobs:
         uses: aquasecurity/trivy-action@0.34.1
         with:
           image-ref: 'arnaudroubinet/krabotnotif:${{ steps.calculate_version.outputs.new_tag }}-native'
-          format: 'template'
-          template: '@/contrib/sarif.tpl'
+          format: 'sarif'
           output: 'trivy-results-native.sarif'
           severity: 'CRITICAL,HIGH'
 

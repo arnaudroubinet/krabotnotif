@@ -63,8 +63,7 @@ jobs:
         uses: aquasecurity/trivy-action@0.34.1
         with:
           image-ref: 'arnaudroubinet/krabotnotif:${GITHUB_REF#refs/tags/}'
-          format: 'template'
-          template: '@/contrib/sarif.tpl'
+          format: 'sarif'
           output: 'trivy-results-jvm.sarif'
           severity: 'CRITICAL,HIGH'
 
@@ -72,8 +71,7 @@ jobs:
         uses: aquasecurity/trivy-action@0.34.1
         with:
           image-ref: 'arnaudroubinet/krabotnotif:${GITHUB_REF#refs/tags/}-native'
-          format: 'template'
-          template: '@/contrib/sarif.tpl'
+          format: 'sarif'
           output: 'trivy-results-native.sarif'
           severity: 'CRITICAL,HIGH'
 
@@ -88,9 +86,6 @@ jobs:
         with:
           sarif_file: 'trivy-results-native.sarif'
           category: native-image
-          template: '@/contrib/sarif.tpl'
-          output: 'trivy-results-native.sarif'
-          severity: 'CRITICAL,HIGH'
 
       - name: Create GitHub Release
         env:
