@@ -20,7 +20,8 @@
       "Bash(gh run:*)",
       "Bash(gh api:*)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "Bash(perl -MMIME::Base64 -e 'local $/; my $data = <STDIN>; print decode_base64\\($data\\);')"
+      "Bash(perl -MMIME::Base64 -e 'local $/; my $data = <STDIN>; print decode_base64\\($data\\);')",
+      "Bash(./mvnw compile:*)"
     ]
   }
 }

@@ -96,7 +96,7 @@ public class CheckKramailsUseCaseImpl implements CheckKramailsUseCase {
     }
 
     private void retryOnFailure(Runnable operation) {
-        for (int attempt = 0; attempt < MAX_RETRIES; attempt++) {
+        for (int attempt = 0; true; attempt++) {
             try {
                 operation.run();
                 return;

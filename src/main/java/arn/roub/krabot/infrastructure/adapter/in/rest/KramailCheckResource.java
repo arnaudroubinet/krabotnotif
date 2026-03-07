@@ -92,7 +92,7 @@ public class KramailCheckResource {
                 // @name         Krabot Delay Timer
                 // @namespace    krabot
                 // @version      %s
-                // @description  Repousse le timer de vérification Krabot quand Kraland est visité
+                // @description  Repousse le timer de vérification Krabot quand Kraland est visité (heartbeat)
                 // @author       Krabot
                 // @match        *://www.kraland.org/*
                 // @match        *://kraland.org/*
@@ -104,20 +104,30 @@ public class KramailCheckResource {
                     'use strict';
 
                     const BACKEND_URL = '%s';
+                    const HEARTBEAT_INTERVAL_MS = 30000;
 
-                    GM_xmlhttpRequest({
-                        method: 'POST',
-                        url: BACKEND_URL + '/krabot/kramail-check/delay',
-                        onload: function(response) {
-                            const data = JSON.parse(response.responseText);
-                            const nextKramailExecution = new Date(data.nextKramailExecution).toLocaleString('fr-FR');
-                            const nextSleepExecution = new Date(data.nextSleepExecution).toLocaleString('fr-FR');
-                            console.log('[Krabot] Timers delayed successfully. Next kramail check: ' + nextKramailExecution + ', Next sleep check: ' + nextSleepExecution);
-                        },
-                        onerror: function(error) {
-                            console.error('[Krabot] Failed to delay timer:', error);
-                        }
-                    });
+                    function sendHeartbeat() {
+                        GM_xmlhttpRequest({
+                            method: 'POST',
+                            url: BACKEND_URL + '/krabot/kramail-check/delay',
+                            onload: function(response) {
+                                try {
+                                    const data = JSON.parse(response.responseText);
+                                    const nextKramailExecution = new Date(data.nextKramailExecution).toLocaleString('fr-FR');
+                                    const nextSleepExecution = new Date(data.nextSleepExecution).toLocaleString('fr-FR');
+                                    console.log('[Krabot] Heartbeat OK. Next kramail: ' + nextKramailExecution + ', Next sleep: ' + nextSleepExecution);
+                                } catch (e) {
+                                    console.warn('[Krabot] Heartbeat response parse error:', e);
+                                }
+                            },
+                            onerror: function(error) {
+                                console.error('[Krabot] Heartbeat failed:', error);
+                            }
+                        });
+                    }
+
+                    sendHeartbeat();
+                    setInterval(sendHeartbeat, HEARTBEAT_INTERVAL_MS);
                 })();
                 """.formatted(scriptVersion, extractHost(backendUrl), backendUrl);
 
