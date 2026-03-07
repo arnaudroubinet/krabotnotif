@@ -14,6 +14,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.Map;
@@ -111,7 +112,7 @@ public class DiscordWebhookClient {
                         if (resetHeader != null) {
                             resetAfter = OffsetDateTime.ofInstant(
                                     Instant.ofEpochSecond(Long.parseLong(resetHeader)),
-                                    ZoneOffset.systemDefault()
+                                    ZoneId.systemDefault()
                             );
                             LOGGER.warn("Rate limit will be reset after: {}", resetAfter);
                         }

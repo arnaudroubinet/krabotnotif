@@ -38,7 +38,7 @@ public class KralandCharacteristicsParser {
         for (Element a : anchors) {
             String href = a.attr("href");
             if (href.isEmpty() || href.contains("/edit")) continue;
-            var m = href.replaceAll(".*/", "");
+            href.replaceAll(".*/", "");
             java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("-(\\\\d+)$").matcher(href);
             if (matcher.find()) return Optional.of(matcher.group(1));
         }

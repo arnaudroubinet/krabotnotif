@@ -17,6 +17,7 @@ import java.io.InputStream;
 import java.util.List;
 import java.util.Properties;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * English-named resource for characteristics exchange (upload, listing, userscript).
@@ -81,7 +82,7 @@ public class CharacteristicsExchangesResource {
         // Map to response including PP — assume UserSummary exposes pp()
         List<UserSummaryResponse> resp = users.stream()
                 .map(u -> new UserSummaryResponse(u.playerId(), u.name(), u.pp()))
-                .collect(Collectors.toList());
+                .toList();
         return Response.ok(resp).build();
     }
 
