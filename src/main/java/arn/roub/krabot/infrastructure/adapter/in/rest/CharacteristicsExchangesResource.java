@@ -14,10 +14,9 @@ import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.io.InputStream;
+import java.time.Instant;
 import java.util.List;
 import java.util.Properties;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * English-named resource for characteristics exchange (upload, listing, userscript).
@@ -42,7 +41,7 @@ public class CharacteristicsExchangesResource {
 
     public record UploadCharacteristicsRequest(String playerId, String name, Integer pp) {}
     // now include pp directly in the user summary response
-    public record UserSummaryResponse(String playerId, String name, int pp) {}
+    public record UserSummaryResponse(String playerId, String name, int pp, Instant updatedAt) {}
 
     @POST
     @Path("uploadCharacteristics")
@@ -81,7 +80,7 @@ public class CharacteristicsExchangesResource {
         List<UserSummary> users = uploadUseCase.getUsers(namespace);
         // Map to response including PP — assume UserSummary exposes pp()
         List<UserSummaryResponse> resp = users.stream()
-                .map(u -> new UserSummaryResponse(u.playerId(), u.name(), u.pp()))
+                .map(u -> new UserSummaryResponse(u.playerId(), u.name(), u.pp(), u.updatedAt()))
                 .toList();
         return Response.ok(resp).build();
     }
