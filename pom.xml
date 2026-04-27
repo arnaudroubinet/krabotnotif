@@ -16,7 +16,7 @@
         <quarkus.platform.version>3.34.6</quarkus.platform.version>
         <skipITs>true</skipITs>
         <surefire-plugin.version>3.5.5</surefire-plugin.version>
-        <jsoup.version>1.22.1</jsoup.version>
+        <jsoup.version>1.22.2</jsoup.version>
     </properties>
 
     <dependencyManagement>
