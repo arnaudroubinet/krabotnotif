@@ -43,9 +43,4 @@ public interface NotificationPort {
      * @param message le message d'erreur
      */
     void sendErrorNotification(String message);
-
-    /**
-     * Envoie un rappel de sommeil.
-     */
-    void sendSleepReminderNotification();
 }

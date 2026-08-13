@@ -3,12 +3,12 @@ package arn.roub.krabot.application.usecase;
 import arn.roub.krabot.domain.model.Account;
 import arn.roub.krabot.domain.port.in.CheckSleepUseCase;
 import arn.roub.krabot.domain.port.out.KralandScrapingPort;
-import arn.roub.krabot.domain.port.out.NotificationPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Implémentation du use case de vérification du rappel de sommeil.
+ * Implémentation du use case de rappel de sommeil : passe l'ordre "Dormir" automatiquement
+ * si l'action est disponible.
  */
 public class CheckSleepUseCaseImpl implements CheckSleepUseCase {
 
@@ -16,33 +16,29 @@ public class CheckSleepUseCaseImpl implements CheckSleepUseCase {
     private static final int MAX_RETRIES = 3;
 
     private final KralandScrapingPort kralandScrapingPort;
-    private final NotificationPort notificationPort;
     private final Account account;
 
     public CheckSleepUseCaseImpl(
             KralandScrapingPort kralandScrapingPort,
-            NotificationPort notificationPort,
             Account account
     ) {
         this.kralandScrapingPort = kralandScrapingPort;
-        this.notificationPort = notificationPort;
         this.account = account;
     }
 
     @Override
     public void execute() {
-        retryOnFailure(this::checkAndNotify);
+        retryOnFailure(this::checkAndSleep);
     }
 
-    private void checkAndNotify() {
+    private void checkAndSleep() {
         LOGGER.info("Checking if sleep action is available...");
-        boolean sleepAvailable = kralandScrapingPort.isSleepAvailable(account);
+        boolean slept = kralandScrapingPort.sleepIfAvailable(account);
 
-        if (sleepAvailable) {
-            LOGGER.info("Sleep action is available, sending reminder notification");
-            notificationPort.sendSleepReminderNotification();
+        if (slept) {
+            LOGGER.info("Sleep order submitted");
         } else {
-            LOGGER.info("Sleep action is not available (button not active)");
+            LOGGER.info("Sleep action is not available (already done today)");
         }
     }
 

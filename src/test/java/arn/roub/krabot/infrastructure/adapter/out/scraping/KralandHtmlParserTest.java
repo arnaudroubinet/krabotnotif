@@ -3,6 +3,9 @@ package arn.roub.krabot.infrastructure.adapter.out.scraping;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.Map;
+import java.util.Optional;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class KralandHtmlParserTest {
@@ -1104,5 +1107,80 @@ class KralandHtmlParserTest {
                 """;
 
         assertTrue(parser.isSleepButtonAvailable(html));
+    }
+
+    @Test
+    void findSleepAjaxTrigger_whenScriptPresent_extractsParamAndToken() {
+        String html = """
+                <a class="btn btn-primary alert11 mini" href="#">Dormir</a>
+                <script>
+                    $(document).on("click", ".alert11", function(e) {
+                        bootbox.confirm( "<div id=\\"ajax-order\\"></div>", function(confirmed) {
+                            if (confirmed) { document.post_msg.submit(); }
+                        });
+                        updateAjax( 'ajax-order', '2-1-100101-1', '7956839657' );
+                        return false;
+                    });
+                </script>
+                """;
+
+        Optional<KralandHtmlParser.AjaxOrderTrigger> trigger = parser.findSleepAjaxTrigger(html);
+
+        assertTrue(trigger.isPresent());
+        assertEquals("2-1-100101-1", trigger.get().param());
+        assertEquals("7956839657", trigger.get().token());
+    }
+
+    @Test
+    void findSleepAjaxTrigger_ignoresSimilarClassNames() {
+        // alert110/alert111/alert1103/alert1110 share the "alert11" prefix but must not match.
+        String html = """
+                <script>
+                    $(document).on("click", ".alert110", function(e) {
+                        updateAjax( 'ajax-order', '2-1-999999-1', '1111111111' );
+                        return false;
+                    });
+                </script>
+                <script>
+                    $(document).on("click", ".alert1103", function(e) {
+                        updateAjax( 'ajax-order', '2-1-888888-1', '2222222222' );
+                        return false;
+                    });
+                </script>
+                """;
+
+        assertTrue(parser.findSleepAjaxTrigger(html).isEmpty());
+    }
+
+    @Test
+    void findSleepAjaxTrigger_whenAbsent_returnsEmpty() {
+        assertTrue(parser.findSleepAjaxTrigger("<html></html>").isEmpty());
+    }
+
+    @Test
+    void extractOrderFormFields_whenFormPresent_returnsHiddenFields() {
+        String html = """
+                <div id="ajax-order"><form name="post_msg" method="post" action="jouer/plateau">
+                <p>Vous pouvez dormir (une fois par jour) et récupérer 12h de CT, 2 PV et 2 PM.</p>
+                <input type="hidden" name="t" value="VlfLJ6JhU/LyYrPA/MkMcdx/KIrjB722qKhG/1LDD3s=">
+                <input type="hidden" name="a" value="1">
+                <input type="hidden" name="n[101]" value="100101">
+                <input type="hidden" name="n[102]" value="1">
+                <input type="hidden" name="n[103]" value="6">
+                </form></div>
+                """;
+
+        Map<String, String> fields = parser.extractOrderFormFields(html);
+
+        assertEquals("VlfLJ6JhU/LyYrPA/MkMcdx/KIrjB722qKhG/1LDD3s=", fields.get("t"));
+        assertEquals("1", fields.get("a"));
+        assertEquals("100101", fields.get("n[101]"));
+        assertEquals("1", fields.get("n[102]"));
+        assertEquals("6", fields.get("n[103]"));
+    }
+
+    @Test
+    void extractOrderFormFields_whenFormAbsent_returnsEmptyMap() {
+        assertTrue(parser.extractOrderFormFields("<html></html>").isEmpty());
     }
 }

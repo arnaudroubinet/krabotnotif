@@ -10,8 +10,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Parser HTML pour extraire les données de Kraland.
@@ -19,6 +24,15 @@ import java.util.Objects;
 public class KralandHtmlParser {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(KralandHtmlParser.class);
+
+    /**
+     * Capture le param et le token de l'appel updateAjax('ajax-order', param, token) déclenché
+     * par le clic sur le bouton "Dormir" (classe alert11). Le "\.alert11\"" ancre la sélection
+     * jQuery exacte pour éviter de capturer alert110/alert111/alert1103/alert1110...
+     */
+    private static final Pattern SLEEP_AJAX_TRIGGER_PATTERN = Pattern.compile(
+            "\\.alert11\"[\\s\\S]*?updateAjax\\(\\s*'ajax-order'\\s*,\\s*'([^']+)'\\s*,\\s*'([^']+)'\\s*\\)"
+    );
 
     /**
      * Vérifie si la page contient une notification (report).
@@ -145,6 +159,46 @@ public class KralandHtmlParser {
         LOGGER.info("Sleep button not available (no btn-primary class found)");
         return false;
     }
+
+    /**
+     * Extrait le param et le token de l'appel AJAX déclenché par le clic sur "Dormir".
+     * Ce call renvoie le fragment HTML contenant le vrai formulaire de confirmation
+     * (avec ses champs anti-triche générés côté serveur).
+     */
+    public Optional<AjaxOrderTrigger> findSleepAjaxTrigger(String html) {
+        Matcher matcher = SLEEP_AJAX_TRIGGER_PATTERN.matcher(html);
+        if (matcher.find()) {
+            return Optional.of(new AjaxOrderTrigger(matcher.group(1), matcher.group(2)));
+        }
+        LOGGER.warn("Sleep AJAX trigger not found in plateau page");
+        return Optional.empty();
+    }
+
+    /**
+     * Extrait les champs cachés du formulaire de confirmation d'ordre (post_msg)
+     * depuis le fragment HTML renvoyé par l'appel AJAX.
+     */
+    public Map<String, String> extractOrderFormFields(String html) {
+        Document doc = Jsoup.parse(html);
+        Element form = doc.selectFirst("form[name=post_msg]");
+        Map<String, String> fields = new LinkedHashMap<>();
+
+        if (form == null) {
+            LOGGER.warn("post_msg form not found in AJAX order fragment");
+            return fields;
+        }
+
+        for (Element input : form.select("input[type=hidden]")) {
+            fields.put(input.attr("name"), input.attr("value"));
+        }
+
+        return fields;
+    }
+
+    /**
+     * Param et token de l'appel updateAjax('ajax-order', param, token).
+     */
+    public record AjaxOrderTrigger(String param, String token) {}
 
     /**
      * Information d'un compte Kraland.

@@ -2,7 +2,6 @@ package arn.roub.krabot.infrastructure.adapter.in.rest;
 
 import arn.roub.krabot.domain.port.in.CheckSleepUseCase;
 import arn.roub.krabot.domain.port.in.DelayKramailCheckUseCase;
-import arn.roub.krabot.domain.port.in.DelaySleepCheckUseCase;
 import arn.roub.krabot.domain.port.in.ResetGeneralNotificationUseCase;
 import arn.roub.krabot.domain.port.in.ResetKramailsNotificationUseCase;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -28,7 +27,6 @@ public class KramailCheckResource {
     private static final Logger LOGGER = LoggerFactory.getLogger(KramailCheckResource.class);
 
     private final DelayKramailCheckUseCase delayKramailCheckUseCase;
-    private final DelaySleepCheckUseCase delaySleepCheckUseCase;
     private final CheckSleepUseCase checkSleepUseCase;
     private final ResetGeneralNotificationUseCase resetGeneralNotificationUseCase;
     private final ResetKramailsNotificationUseCase resetKramailsNotificationUseCase;
@@ -37,14 +35,12 @@ public class KramailCheckResource {
 
     public KramailCheckResource(
             DelayKramailCheckUseCase delayKramailCheckUseCase,
-            DelaySleepCheckUseCase delaySleepCheckUseCase,
             CheckSleepUseCase checkSleepUseCase,
             ResetGeneralNotificationUseCase resetGeneralNotificationUseCase,
             ResetKramailsNotificationUseCase resetKramailsNotificationUseCase,
             @ConfigProperty(name = "krabot.backend.url") String backendUrl
     ) {
         this.delayKramailCheckUseCase = delayKramailCheckUseCase;
-        this.delaySleepCheckUseCase = delaySleepCheckUseCase;
         this.checkSleepUseCase = checkSleepUseCase;
         this.resetGeneralNotificationUseCase = resetGeneralNotificationUseCase;
         this.resetKramailsNotificationUseCase = resetKramailsNotificationUseCase;
@@ -59,11 +55,10 @@ public class KramailCheckResource {
         resetGeneralNotificationUseCase.execute();
         resetKramailsNotificationUseCase.execute();
         Instant nextKramailExecution = delayKramailCheckUseCase.delay();
-        Instant nextSleepExecution = delaySleepCheckUseCase.delay();
-        return Response.ok(new DelayResponseDto(nextKramailExecution, nextSleepExecution)).build();
+        return Response.ok(new DelayResponseDto(nextKramailExecution)).build();
     }
 
-    public record DelayResponseDto(Instant nextKramailExecution, Instant nextSleepExecution) {}
+    public record DelayResponseDto(Instant nextKramailExecution) {}
 
     @POST
     @Path("sleep-check")
@@ -114,8 +109,7 @@ public class KramailCheckResource {
                                 try {
                                     const data = JSON.parse(response.responseText);
                                     const nextKramailExecution = new Date(data.nextKramailExecution).toLocaleString('fr-FR');
-                                    const nextSleepExecution = new Date(data.nextSleepExecution).toLocaleString('fr-FR');
-                                    console.log('[Krabot] Heartbeat OK. Next kramail: ' + nextKramailExecution + ', Next sleep: ' + nextSleepExecution);
+                                    console.log('[Krabot] Heartbeat OK. Next kramail: ' + nextKramailExecution);
                                 } catch (e) {
                                     console.warn('[Krabot] Heartbeat response parse error:', e);
                                 }

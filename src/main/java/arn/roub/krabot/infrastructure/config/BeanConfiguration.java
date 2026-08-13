@@ -88,8 +88,7 @@ public class BeanConfiguration {
                 discordConfig.messageKramail(),
                 discordConfig.messageNotification(),
                 discordConfig.release(),
-                discordConfig.errorPrefixMessage(),
-                discordConfig.messageSleep()
+                discordConfig.errorPrefixMessage()
         );
     }
 
@@ -127,11 +126,10 @@ public class BeanConfiguration {
 
     @Produces
     @ApplicationScoped
-    public CheckSleepUseCase checkSleepUseCase(NotificationPort notificationPort) {
+    public CheckSleepUseCase checkSleepUseCase() {
         Account account = new Account(kralandConfig.user(), kralandConfig.password());
         return new CheckSleepUseCaseImpl(
                 kralandScrapingPort,
-                notificationPort,
                 account
         );
     }

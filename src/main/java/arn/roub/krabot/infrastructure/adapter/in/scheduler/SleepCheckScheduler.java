@@ -2,7 +2,6 @@ package arn.roub.krabot.infrastructure.adapter.in.scheduler;
 
 import arn.roub.krabot.application.service.NotificationOrchestrator;
 import arn.roub.krabot.domain.port.in.CheckSleepUseCase;
-import arn.roub.krabot.domain.port.in.DelaySleepCheckUseCase;
 import io.quarkus.runtime.Startup;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -18,16 +17,15 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
  * Timer pour la vérification quotidienne du rappel de sommeil.
- * Permet de décaler dynamiquement la prochaine exécution.
+ * S'exécute strictement à l'heure programmée, sans jamais être décalé par l'activité du joueur.
  */
 @Startup
 @ApplicationScoped
-public class SleepCheckScheduler implements DelaySleepCheckUseCase {
+public class SleepCheckScheduler {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SleepCheckScheduler.class);
 
@@ -35,22 +33,17 @@ public class SleepCheckScheduler implements DelaySleepCheckUseCase {
     private final CheckSleepUseCase checkSleepUseCase;
     private final NotificationOrchestrator notificationOrchestrator;
     private final LocalTime scheduledTime;
-    private final Duration delayAmount;
 
-    private ScheduledFuture<?> currentTask;
-    private Instant nextExecutionTime;
     private long scheduleGeneration = 0;
 
     public SleepCheckScheduler(
             CheckSleepUseCase checkSleepUseCase,
             NotificationOrchestrator notificationOrchestrator,
-            @ConfigProperty(name = "scheduler.sleep.time", defaultValue = "20:00") String scheduledTimeStr,
-            @ConfigProperty(name = "scheduler.kraland.scraping.delay") Duration delayAmount
+            @ConfigProperty(name = "scheduler.sleep.time", defaultValue = "23:55") String scheduledTimeStr
     ) {
         this.checkSleepUseCase = checkSleepUseCase;
         this.notificationOrchestrator = notificationOrchestrator;
         this.scheduledTime = LocalTime.parse(scheduledTimeStr);
-        this.delayAmount = delayAmount;
     }
 
     @PostConstruct
@@ -81,12 +74,11 @@ public class SleepCheckScheduler implements DelaySleepCheckUseCase {
         return Duration.between(now, nextExecution);
     }
 
-    private synchronized Instant scheduleNext(Duration delay) {
+    private synchronized void scheduleNext(Duration delay) {
         long gen = ++scheduleGeneration;
-        currentTask = executor.schedule(() -> executeAndReschedule(gen), delay.toMillis(), TimeUnit.MILLISECONDS);
-        nextExecutionTime = Instant.now().plus(delay);
+        executor.schedule(() -> executeAndReschedule(gen), delay.toMillis(), TimeUnit.MILLISECONDS);
+        Instant nextExecutionTime = Instant.now().plus(delay);
         LOGGER.info("Next sleep check scheduled at {} (in {}, generation {})", nextExecutionTime, delay, gen);
-        return nextExecutionTime;
     }
 
     private void executeAndReschedule(long generation) {
@@ -105,27 +97,6 @@ public class SleepCheckScheduler implements DelaySleepCheckUseCase {
             scheduleNextExecution();
         } else {
             LOGGER.debug("Skipping reschedule: generation {} is stale (current: {})", generation, scheduleGeneration);
-        }
-    }
-
-    @Override
-    public synchronized Instant delay() {
-        if (currentTask != null && !currentTask.isDone()) {
-            long remainingMs = currentTask.getDelay(TimeUnit.MILLISECONDS);
-
-            // Ne décaler que si la prochaine exécution est imminente (dans moins de delayAmount)
-            if (remainingMs > delayAmount.toMillis()) {
-                LOGGER.debug("Next sleep check is not imminent ({}ms remaining), not delaying", remainingMs);
-                return nextExecutionTime;
-            }
-
-            currentTask.cancel(false);
-            Duration newDelay = Duration.ofMillis(remainingMs).plus(delayAmount);
-            LOGGER.info("Delaying next sleep check by {}. New delay: {}", delayAmount, newDelay);
-            return scheduleNext(newDelay);
-        } else {
-            LOGGER.warn("No scheduled task to delay");
-            return nextExecutionTime;
         }
     }
 }

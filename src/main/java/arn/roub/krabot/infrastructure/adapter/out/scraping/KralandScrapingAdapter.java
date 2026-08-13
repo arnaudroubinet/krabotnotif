@@ -18,8 +18,10 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executors;
 
 /**
@@ -32,6 +34,7 @@ public class KralandScrapingAdapter implements KralandScrapingPort {
     private static final String KRAMAIL_URL = "http://www.kraland.org/kramail";
     private static final String AUTH_URL = "http://www.kraland.org/accueil";
     private static final String PLATEAU_URL = "http://www.kraland.org/jouer/plateau";
+    private static final String AJX_URL_BASE = "http://www.kraland.org/ajx/";
 
     private final HttpClient httpClient;
     private final KralandHtmlParser parser;
@@ -150,16 +153,60 @@ public class KralandScrapingAdapter implements KralandScrapingPort {
     }
 
     @Override
-    public boolean isSleepAvailable(Account account) {
+    public boolean sleepIfAvailable(Account account) {
         try {
-            HttpResponse<String> response = executeWithAuth(PLATEAU_URL, account);
-            boolean available = parser.isSleepButtonAvailable(response.body());
-            LOGGER.debug("Sleep button available: {}", available);
-            return available;
+            HttpResponse<String> plateauResponse = executeWithAuth(PLATEAU_URL, account);
+
+            if (!parser.isSleepButtonAvailable(plateauResponse.body())) {
+                LOGGER.debug("Sleep action not available (already done today)");
+                return false;
+            }
+
+            KralandHtmlParser.AjaxOrderTrigger trigger = parser.findSleepAjaxTrigger(plateauResponse.body())
+                    .orElseThrow(() -> new ScrapingException("Sleep button available but AJAX trigger not found"));
+
+            String ajxUrl = AJX_URL_BASE + trigger.param() + "-" + Instant.now().toEpochMilli() + "/" + trigger.token();
+            HttpResponse<String> orderFragment = executeWithAuth(ajxUrl, account);
+
+            Map<String, String> formFields = parser.extractOrderFormFields(orderFragment.body());
+            if (formFields.isEmpty()) {
+                throw new ScrapingException("Sleep order form fields not found in AJAX fragment");
+            }
+
+            submitOrderForm(formFields);
+            LOGGER.info("Sleep order submitted successfully");
+            return true;
         } catch (ScrapingException e) {
             throw e;
         } catch (Exception e) {
-            throw new ScrapingException("Failed to check sleep availability", e);
+            throw new ScrapingException("Failed to perform sleep action", e);
+        }
+    }
+
+    private void submitOrderForm(Map<String, String> formFields) throws Exception {
+        StringBuilder body = new StringBuilder();
+        for (Map.Entry<String, String> field : formFields.entrySet()) {
+            if (!body.isEmpty()) {
+                body.append('&');
+            }
+            body.append(URLEncoder.encode(field.getKey(), StandardCharsets.UTF_8))
+                    .append('=')
+                    .append(URLEncoder.encode(field.getValue(), StandardCharsets.UTF_8));
+        }
+
+        HttpRequest request = HttpRequest.newBuilder(new URI(PLATEAU_URL))
+                .headers(
+                        "Content-Type", "application/x-www-form-urlencoded",
+                        "Origin", "http://www.kraland.org",
+                        "Referer", PLATEAU_URL
+                )
+                .POST(HttpRequest.BodyPublishers.ofString(body.toString()))
+                .build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+
+        if (response.statusCode() >= 400) {
+            throw new ScrapingException("Sleep order submission failed with status: " + response.statusCode());
         }
     }
 }
