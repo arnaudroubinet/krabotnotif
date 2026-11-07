@@ -5,8 +5,10 @@ name: Verify
 on:
   workflow_call:
     inputs:
-      ref:
-        description: "Ref/SHA à vérifier (par défaut : le commit de l'événement)"
+      expected-master-sha:
+        description: >-
+          Si renseigné, vérifie master (et non le commit de l'événement) et échoue si master
+          n'est plus à ce SHA. Aucune ref fournie en entrée n'est checkoutée (pas de code non fiable).
         type: string
         required: false
         default: ""
@@ -20,20 +22,36 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: Checkout
+      - name: Checkout event commit
+        if: inputs.expected-master-sha == ''
         uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.ref }}
           fetch-depth: 0 # git-commit-id-maven-plugin (git describe)
+
+      - name: Checkout master
+        if: inputs.expected-master-sha != ''
+        uses: actions/checkout@v7
+        with:
+          ref: master
+          fetch-depth: 0
+
+      - name: Ensure master is at the expected commit
+        if: inputs.expected-master-sha != ''
+        env:
+          EXPECTED: ${{ inputs.expected-master-sha }}
+        run: |
+          ACTUAL=$(git rev-parse HEAD)
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "::error::master a bougé ($ACTUAL au lieu de $EXPECTED) : la prochaine release le prendra en compte."
+            exit 1
+          fi
 
       - name: Set up JDK 25
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "25"
-          # Pas de cache Maven ici : ce workflow vérifie aussi des refs passées en entrée depuis
-          # des contextes privilégiés (schedule / workflow_dispatch). Un cache écrit pendant
-          # ces exécutions pourrait être restauré sur la branche par défaut (cache poisoning).
+          cache: maven
 
       # Compilation, tests unitaires (mocks), règles ArchUnit (architecture hexagonale),
       # validation CDI au build Quarkus et rapport de couverture JaCoCo.

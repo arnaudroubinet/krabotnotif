@@ -122,7 +122,7 @@ jobs:
     if: needs.prepare.outputs.release == 'true'
     uses: ./.github/workflows/verify.yml
     with:
-      ref: ${{ needs.prepare.outputs.sha }}
+      expected-master-sha: ${{ needs.prepare.outputs.sha }}
 
   jvm-image:
     name: JVM image (amd64 + arm64)

@@ -1,5 +1,5 @@
 # Mise à jour automatique de la plateforme Quarkus (quarkus:update + recettes OpenRewrite).
-# update → verify (tests + architecture) → merge → release.
+# update → vérification (tests + architecture) dans le même job → merge → release.
 # Si la vérification échoue, la PR reste ouverte pour une intervention manuelle.
 # Les autres dépendances sont mises à jour par Dependabot (voir ci.yml pour l'auto-merge).
 name: Auto Update
@@ -21,19 +21,21 @@ env:
 
 jobs:
   update:
-    name: Quarkus update
+    name: Quarkus update & verify
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     permissions:
       contents: write
       pull-requests: write
     outputs:
-      changed: ${{ steps.commit.outputs.changed }}
+      verified: ${{ steps.verify.outcome == 'success' && steps.pr.outputs.number != '' }}
       sha: ${{ steps.commit.outputs.sha }}
       pr: ${{ steps.pr.outputs.number }}
     steps:
       - uses: actions/checkout@v7
         with:
           ref: master
+          fetch-depth: 0 # git-commit-id-maven-plugin (git describe)
 
       - uses: actions/setup-java@v5
         with:
@@ -57,17 +59,27 @@ jobs:
           git checkout -B "$BRANCH"
           git add -A
           git commit -m "deps: update Quarkus platform (quarkus:update + OpenRewrite)"
-          git push --force origin "$BRANCH"
           echo "changed=true" >> "$GITHUB_OUTPUT"
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           git show --stat HEAD
 
-      - name: Open or reuse pull request
+      # Mêmes vérifications que verify.yml, exécutées sur le code généré dans ce job
+      # (aucune ref externe n'est checkoutée).
+      - name: Verify (build, tests, architecture)
+        id: verify
+        if: steps.commit.outputs.changed == 'true'
+        continue-on-error: true
+        run: |
+          ./mvnw -B -ntp verify
+          docker build -f src/main/docker/Dockerfile.jvm -t krabotnotif:verify .
+
+      - name: Push branch and open or reuse pull request
         id: pr
         if: steps.commit.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          git push --force origin "$BRANCH"
           NUMBER=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty')
           if [ -z "$NUMBER" ]; then
             URL=$(gh pr create --base master --head "$BRANCH" \
@@ -78,16 +90,19 @@ jobs:
           fi
           echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
 
-  verify:
-    needs: update
-    if: needs.update.outputs.changed == 'true'
-    uses: ./.github/workflows/verify.yml
-    with:
-      ref: ${{ needs.update.outputs.sha }}
+      - name: Report verification failure
+        if: steps.commit.outputs.changed == 'true' && steps.verify.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr comment "${{ steps.pr.outputs.number }}" \
+            --body "❌ La vérification a échoué ([run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})) : intervention manuelle nécessaire."
+          exit 1
 
   merge:
     name: Merge
-    needs: [update, verify]
+    needs: update
+    if: needs.update.outputs.verified == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -99,20 +114,6 @@ jobs:
         run: |
           gh pr merge "${{ needs.update.outputs.pr }}" --repo "${{ github.repository }}" \
             --squash --delete-branch --match-head-commit "${{ needs.update.outputs.sha }}"
-
-  report-failure:
-    name: Report failure
-    needs: [update, verify]
-    if: failure() && needs.update.outputs.pr != ''
-    runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
-    steps:
-      - env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh pr comment "${{ needs.update.outputs.pr }}" --repo "${{ github.repository }}" \
-            --body "❌ La vérification a échoué ([run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})) : intervention manuelle nécessaire."
 
   release:
     needs: merge
