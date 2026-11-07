@@ -1,7 +1,7 @@
 # Mise à jour automatique de la plateforme Quarkus (quarkus:update + recettes OpenRewrite).
 # update → vérification (tests + architecture) dans le même job → merge → release.
 # Si la vérification échoue, la PR reste ouverte pour une intervention manuelle.
-# Les autres dépendances sont mises à jour par Dependabot (voir ci.yml pour l'auto-merge).
+# Les autres dépendances sont mises à jour par Renovate (voir .github/renovate.json).
 name: Auto Update
 
 on:
