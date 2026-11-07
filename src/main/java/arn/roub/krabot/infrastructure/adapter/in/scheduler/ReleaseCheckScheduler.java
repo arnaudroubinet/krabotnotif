@@ -1,6 +1,6 @@
 package arn.roub.krabot.infrastructure.adapter.in.scheduler;
 
-import arn.roub.krabot.application.service.NotificationOrchestrator;
+import arn.roub.krabot.domain.port.in.ReportErrorUseCase;
 import arn.roub.krabot.domain.port.in.CheckReleaseUseCase;
 import io.quarkus.scheduler.Scheduled;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -16,14 +16,14 @@ public class ReleaseCheckScheduler {
     private static final Logger LOGGER = LoggerFactory.getLogger(ReleaseCheckScheduler.class);
 
     private final CheckReleaseUseCase checkReleaseUseCase;
-    private final NotificationOrchestrator notificationOrchestrator;
+    private final ReportErrorUseCase reportErrorUseCase;
 
     public ReleaseCheckScheduler(
             CheckReleaseUseCase checkReleaseUseCase,
-            NotificationOrchestrator notificationOrchestrator
+            ReportErrorUseCase reportErrorUseCase
     ) {
         this.checkReleaseUseCase = checkReleaseUseCase;
-        this.notificationOrchestrator = notificationOrchestrator;
+        this.reportErrorUseCase = reportErrorUseCase;
     }
 
     @Scheduled(cron = "${scheduler.github.scraping.cron}")
@@ -32,7 +32,7 @@ public class ReleaseCheckScheduler {
             checkReleaseUseCase.execute();
         } catch (RuntimeException e) {
             LOGGER.error("Error during release check: {}", e.getMessage());
-            notificationOrchestrator.notifyError(e);
+            reportErrorUseCase.notifyError(e);
         }
     }
 }

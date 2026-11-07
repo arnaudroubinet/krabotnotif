@@ -32,7 +32,7 @@ public class GithubReleaseAdapter implements GithubReleasePort {
     private final HttpRequest latestReleaseRequest;
 
     public GithubReleaseAdapter() {
-        this.httpClient = HttpClient.newBuilder()
+        this(HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(30))
                 .cookieHandler(new CookieManager())
                 .followRedirects(HttpClient.Redirect.ALWAYS)
@@ -40,13 +40,15 @@ public class GithubReleaseAdapter implements GithubReleasePort {
                 .proxy(ProxySelector.getDefault())
                 .version(HttpClient.Version.HTTP_2)
                 .executor(Executors.newVirtualThreadPerTaskExecutor())
-                .build();
+                .build(), URI.create(GITHUB_API_URL));
+    }
 
-        try {
-            this.latestReleaseRequest = HttpRequest.newBuilder(new URI(GITHUB_API_URL)).GET().build();
-        } catch (Exception e) {
-            throw new GithubApiException("Failed to initialize GitHub API client", e);
-        }
+    /**
+     * Constructeur permettant d'injecter le client HTTP (tests).
+     */
+    GithubReleaseAdapter(HttpClient httpClient, URI latestReleaseUri) {
+        this.httpClient = httpClient;
+        this.latestReleaseRequest = HttpRequest.newBuilder(latestReleaseUri).GET().build();
     }
 
     @Override

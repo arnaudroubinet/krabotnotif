@@ -4,73 +4,55 @@ import arn.roub.krabot.application.service.NotificationOrchestrator;
 import arn.roub.krabot.application.usecase.CheckKramailsUseCaseImpl;
 import arn.roub.krabot.application.usecase.CheckReleaseUseCaseImpl;
 import arn.roub.krabot.application.usecase.CheckSleepUseCaseImpl;
+import arn.roub.krabot.application.usecase.DelayKramailCheckUseCaseImpl;
 import arn.roub.krabot.application.usecase.GetCurrentStateUseCaseImpl;
-import arn.roub.krabot.application.usecase.ResetGeneralNotificationUseCaseImpl;
-import arn.roub.krabot.application.usecase.ResetKramailsNotificationUseCaseImpl;
 import arn.roub.krabot.application.usecase.UploadCharacteristicsUseCaseImpl;
 import arn.roub.krabot.domain.model.Account;
+import arn.roub.krabot.domain.port.in.ApplicationLifecycleUseCase;
 import arn.roub.krabot.domain.port.in.CheckKramailsUseCase;
 import arn.roub.krabot.domain.port.in.CheckReleaseUseCase;
 import arn.roub.krabot.domain.port.in.CheckSleepUseCase;
+import arn.roub.krabot.domain.port.in.DelayKramailCheckUseCase;
 import arn.roub.krabot.domain.port.in.GetCurrentStateUseCase;
-import arn.roub.krabot.domain.port.in.ResetGeneralNotificationUseCase;
-import arn.roub.krabot.domain.port.in.ResetKramailsNotificationUseCase;
+import arn.roub.krabot.domain.port.in.ReportErrorUseCase;
 import arn.roub.krabot.domain.port.in.UploadCharacteristicsUseCase;
+import arn.roub.krabot.domain.port.out.CharacteristicsPort;
 import arn.roub.krabot.domain.port.out.GithubReleasePort;
 import arn.roub.krabot.domain.port.out.KralandScrapingPort;
+import arn.roub.krabot.domain.port.out.KramailCheckTimerPort;
 import arn.roub.krabot.domain.port.out.NotificationPort;
 import arn.roub.krabot.domain.port.out.StateRepositoryPort;
 import arn.roub.krabot.domain.service.NotificationDomainService;
 import arn.roub.krabot.infrastructure.adapter.out.notification.DiscordNotificationAdapter;
 import arn.roub.krabot.infrastructure.adapter.out.notification.DiscordWebhookClient;
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
+import arn.roub.krabot.infrastructure.adapter.out.persistence.CharacteristicsMemoryRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
+import jakarta.enterprise.inject.Typed;
+import jakarta.inject.Singleton;
 
 /**
- * Configuration CDI pour le wiring des beans.
+ * Composition root : assemble le domaine, l'application et les adapters.
+ * <p>
+ * Le domaine et l'application ne connaissent pas CDI ; c'est ici, et uniquement ici,
+ * que les implémentations sont instanciées et reliées à leurs ports.
  */
 @ApplicationScoped
 public class BeanConfiguration {
 
-    private final DiscordConfig discordConfig;
-    private final KralandConfig kralandConfig;
-    private final KralandScrapingPort kralandScrapingPort;
-    private final GithubReleasePort githubReleasePort;
-    private final StateRepositoryPort stateRepositoryPort;
+    // ── Configuration ────────────────────────────────────────────
 
-    private NotificationOrchestrator notificationOrchestrator;
-
-    public BeanConfiguration(
-            DiscordConfig discordConfig,
-            KralandConfig kralandConfig,
-            KralandScrapingPort kralandScrapingPort,
-            GithubReleasePort githubReleasePort,
-            StateRepositoryPort stateRepositoryPort
-    ) {
-        this.discordConfig = discordConfig;
-        this.kralandConfig = kralandConfig;
-        this.kralandScrapingPort = kralandScrapingPort;
-        this.githubReleasePort = githubReleasePort;
-        this.stateRepositoryPort = stateRepositoryPort;
+    @Produces
+    @Singleton // un record est final : pas de proxy possible pour un scope normal
+    public Account kralandAccount(KralandConfig kralandConfig) {
+        return new Account(kralandConfig.user(), kralandConfig.password());
     }
 
-    @PostConstruct
-    void initialize() {
-        notificationOrchestrator().initialize();
-    }
-
-    @PreDestroy
-    void shutdown() {
-        if (notificationOrchestrator != null) {
-            notificationOrchestrator.shutdown();
-        }
-    }
+    // ── Adapters sortants ────────────────────────────────────────
 
     @Produces
     @ApplicationScoped
-    public DiscordWebhookClient discordWebhookClient() {
+    public DiscordWebhookClient discordWebhookClient(DiscordConfig discordConfig) {
         return new DiscordWebhookClient(
                 discordConfig.url(),
                 discordConfig.username(),
@@ -80,7 +62,7 @@ public class BeanConfiguration {
 
     @Produces
     @ApplicationScoped
-    public NotificationPort notificationPort(DiscordWebhookClient webhookClient) {
+    public NotificationPort notificationPort(DiscordWebhookClient webhookClient, DiscordConfig discordConfig) {
         return new DiscordNotificationAdapter(
                 webhookClient,
                 discordConfig.firstMessage(),
@@ -94,17 +76,44 @@ public class BeanConfiguration {
 
     @Produces
     @ApplicationScoped
+    public CharacteristicsPort characteristicsPort() {
+        return new CharacteristicsMemoryRepository();
+    }
+
+    // ── Domaine ──────────────────────────────────────────────────
+
+    @Produces
+    @ApplicationScoped
     public NotificationDomainService notificationDomainService() {
         return new NotificationDomainService();
+    }
+
+    // ── Use cases (ports primaires) ──────────────────────────────
+
+    /**
+     * Expose l'orchestrateur sous ses ports primaires
+     * ({@link ApplicationLifecycleUseCase} et {@link ReportErrorUseCase}).
+     */
+    @Produces
+    @ApplicationScoped
+    @Typed({ApplicationLifecycleUseCase.class, ReportErrorUseCase.class})
+    public NotificationOrchestrator notificationOrchestrator(
+            NotificationPort notificationPort,
+            GithubReleasePort githubReleasePort,
+            StateRepositoryPort stateRepositoryPort
+    ) {
+        return new NotificationOrchestrator(notificationPort, githubReleasePort, stateRepositoryPort);
     }
 
     @Produces
     @ApplicationScoped
     public CheckKramailsUseCase checkKramailsUseCase(
+            KralandScrapingPort kralandScrapingPort,
             NotificationPort notificationPort,
-            NotificationDomainService notificationDomainService
+            StateRepositoryPort stateRepositoryPort,
+            NotificationDomainService notificationDomainService,
+            Account account
     ) {
-        Account account = new Account(kralandConfig.user(), kralandConfig.password());
         return new CheckKramailsUseCaseImpl(
                 kralandScrapingPort,
                 notificationPort,
@@ -116,65 +125,38 @@ public class BeanConfiguration {
 
     @Produces
     @ApplicationScoped
-    public CheckReleaseUseCase checkReleaseUseCase(NotificationPort notificationPort) {
-        return new CheckReleaseUseCaseImpl(
-                githubReleasePort,
-                notificationPort,
-                stateRepositoryPort
-        );
+    public CheckReleaseUseCase checkReleaseUseCase(
+            GithubReleasePort githubReleasePort,
+            NotificationPort notificationPort,
+            StateRepositoryPort stateRepositoryPort
+    ) {
+        return new CheckReleaseUseCaseImpl(githubReleasePort, notificationPort, stateRepositoryPort);
     }
 
     @Produces
     @ApplicationScoped
-    public CheckSleepUseCase checkSleepUseCase() {
-        Account account = new Account(kralandConfig.user(), kralandConfig.password());
-        return new CheckSleepUseCaseImpl(
-                kralandScrapingPort,
-                account
-        );
+    public CheckSleepUseCase checkSleepUseCase(KralandScrapingPort kralandScrapingPort, Account account) {
+        return new CheckSleepUseCaseImpl(kralandScrapingPort, account);
     }
 
     @Produces
     @ApplicationScoped
-    public GetCurrentStateUseCase getCurrentStateUseCase() {
+    public DelayKramailCheckUseCase delayKramailCheckUseCase(
+            StateRepositoryPort stateRepositoryPort,
+            KramailCheckTimerPort kramailCheckTimerPort
+    ) {
+        return new DelayKramailCheckUseCaseImpl(stateRepositoryPort, kramailCheckTimerPort);
+    }
+
+    @Produces
+    @ApplicationScoped
+    public GetCurrentStateUseCase getCurrentStateUseCase(StateRepositoryPort stateRepositoryPort) {
         return new GetCurrentStateUseCaseImpl(stateRepositoryPort);
     }
 
     @Produces
     @ApplicationScoped
-    public ResetGeneralNotificationUseCase resetGeneralNotificationUseCase() {
-        return new ResetGeneralNotificationUseCaseImpl(stateRepositoryPort);
-    }
-
-    @Produces
-    @ApplicationScoped
-    public ResetKramailsNotificationUseCase resetKramailsNotificationUseCase() {
-        return new ResetKramailsNotificationUseCaseImpl(stateRepositoryPort);
-    }
-
-    @Produces
-    @ApplicationScoped
-    public NotificationOrchestrator notificationOrchestrator() {
-        if (notificationOrchestrator == null) {
-            NotificationPort notificationPort = notificationPort(discordWebhookClient());
-            notificationOrchestrator = new NotificationOrchestrator(
-                    notificationPort,
-                    githubReleasePort,
-                    stateRepositoryPort
-            );
-        }
-        return notificationOrchestrator;
-    }
-
-    @Produces
-    @ApplicationScoped
-    public arn.roub.krabot.domain.port.out.CharacteristicsPort characteristicsRepository() {
-        return new arn.roub.krabot.infrastructure.adapter.out.persistence.CharacteristicsMemoryRepository();
-    }
-
-    @Produces
-    @ApplicationScoped
-    public UploadCharacteristicsUseCase uploadCharacteristicsUseCase(arn.roub.krabot.domain.port.out.CharacteristicsPort repo) {
-        return new UploadCharacteristicsUseCaseImpl(repo);
+    public UploadCharacteristicsUseCase uploadCharacteristicsUseCase(CharacteristicsPort characteristicsPort) {
+        return new UploadCharacteristicsUseCaseImpl(characteristicsPort);
     }
 }

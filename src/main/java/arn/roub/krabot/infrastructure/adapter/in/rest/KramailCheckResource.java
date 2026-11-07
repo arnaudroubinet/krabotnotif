@@ -2,8 +2,6 @@ package arn.roub.krabot.infrastructure.adapter.in.rest;
 
 import arn.roub.krabot.domain.port.in.CheckSleepUseCase;
 import arn.roub.krabot.domain.port.in.DelayKramailCheckUseCase;
-import arn.roub.krabot.domain.port.in.ResetGeneralNotificationUseCase;
-import arn.roub.krabot.domain.port.in.ResetKramailsNotificationUseCase;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
@@ -28,22 +26,16 @@ public class KramailCheckResource {
 
     private final DelayKramailCheckUseCase delayKramailCheckUseCase;
     private final CheckSleepUseCase checkSleepUseCase;
-    private final ResetGeneralNotificationUseCase resetGeneralNotificationUseCase;
-    private final ResetKramailsNotificationUseCase resetKramailsNotificationUseCase;
     private final String backendUrl;
     private final String scriptVersion;
 
     public KramailCheckResource(
             DelayKramailCheckUseCase delayKramailCheckUseCase,
             CheckSleepUseCase checkSleepUseCase,
-            ResetGeneralNotificationUseCase resetGeneralNotificationUseCase,
-            ResetKramailsNotificationUseCase resetKramailsNotificationUseCase,
             @ConfigProperty(name = "krabot.backend.url") String backendUrl
     ) {
         this.delayKramailCheckUseCase = delayKramailCheckUseCase;
         this.checkSleepUseCase = checkSleepUseCase;
-        this.resetGeneralNotificationUseCase = resetGeneralNotificationUseCase;
-        this.resetKramailsNotificationUseCase = resetKramailsNotificationUseCase;
         this.backendUrl = backendUrl;
         this.scriptVersion = String.valueOf(Instant.now().getEpochSecond());
     }
@@ -52,8 +44,6 @@ public class KramailCheckResource {
     @Path("delay")
     @Produces(MediaType.APPLICATION_JSON)
     public Response delay() {
-        resetGeneralNotificationUseCase.execute();
-        resetKramailsNotificationUseCase.execute();
         Instant nextKramailExecution = delayKramailCheckUseCase.delay();
         return Response.ok(new DelayResponseDto(nextKramailExecution)).build();
     }

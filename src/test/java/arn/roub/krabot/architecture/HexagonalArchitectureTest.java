@@ -70,6 +70,13 @@ public class HexagonalArchitectureTest {
             )
             .because("Le Domain doit être indépendant des frameworks");
 
+    @ArchTest
+    static final ArchRule domain_should_only_depend_on_itself_and_jdk =
+        classes().that().resideInAPackage(DOMAIN_LAYER)
+            .should().onlyDependOnClassesThat()
+            .resideInAnyPackage(DOMAIN_LAYER, "java..")
+            .because("Le Domain est le cœur de l'hexagone : il ne dépend que de lui-même et du JDK");
+
     // ══════════════════════════════════════════════════════════════
     // RÈGLES DE L'APPLICATION
     // ══════════════════════════════════════════════════════════════
@@ -125,6 +132,40 @@ public class HexagonalArchitectureTest {
             .and().haveSimpleNameEndingWith("Adapter")
             .should().implement(JavaClass.Predicates.resideInAPackage("..domain.port.out.."))
             .because("Les adapters sortants doivent implémenter un port secondaire");
+
+    @ArchTest
+    static final ArchRule inbound_adapters_should_only_use_primary_ports =
+        noClasses().that().resideInAPackage("..infrastructure.adapter.in..")
+            .should().dependOnClassesThat().resideInAnyPackage(
+                APPLICATION_LAYER,
+                "..infrastructure.adapter.out..",
+                "..domain.service.."
+            )
+            .because("Les adapters entrants pilotent le domaine uniquement via les ports primaires (domain.port.in)");
+
+    @ArchTest
+    static final ArchRule outbound_adapters_should_not_depend_on_primary_side =
+        noClasses().that().resideInAPackage("..infrastructure.adapter.out..")
+            .should().dependOnClassesThat().resideInAnyPackage(
+                APPLICATION_LAYER,
+                "..domain.port.in..",
+                "..infrastructure.adapter.in.."
+            )
+            .because("Les adapters sortants implémentent des ports secondaires et ne connaissent pas les use cases");
+
+    @ArchTest
+    static final ArchRule only_composition_root_depends_on_application =
+        noClasses().that().resideInAPackage(INFRASTRUCTURE_LAYER)
+            .and().resideOutsideOfPackage("..infrastructure.config..")
+            .should().dependOnClassesThat().resideInAPackage(APPLICATION_LAYER)
+            .because("Seule la composition root (infrastructure.config) instancie les implémentations de l'Application");
+
+    @ArchTest
+    static final ArchRule application_services_should_implement_primary_ports =
+        classes().that().resideInAPackage("..application.service..")
+            .and().areTopLevelClasses()
+            .should().implement(JavaClass.Predicates.resideInAPackage("..domain.port.in.."))
+            .because("Les services applicatifs sont exposés via des ports primaires");
 
     @ArchTest
     static final ArchRule usecases_should_implement_primary_ports =

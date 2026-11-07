@@ -1,0 +1,73 @@
+# Workflow réutilisable : la seule définition de « le code est sain ».
+# Appelé par CI (PR / master), Auto Update (avant merge) et Release (avant publication).
+name: Verify
+
+on:
+  workflow_call:
+    inputs:
+      expected-master-sha:
+        description: >-
+          Si renseigné, vérifie master (et non le commit de l'événement) et échoue si master
+          n'est plus à ce SHA. Aucune ref fournie en entrée n'est checkoutée (pas de code non fiable).
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Build, tests & architecture
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout event commit
+        if: inputs.expected-master-sha == ''
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # git-commit-id-maven-plugin (git describe)
+
+      - name: Checkout master
+        if: inputs.expected-master-sha != ''
+        uses: actions/checkout@v7
+        with:
+          ref: master
+          fetch-depth: 0
+
+      - name: Ensure master is at the expected commit
+        if: inputs.expected-master-sha != ''
+        env:
+          EXPECTED: ${{ inputs.expected-master-sha }}
+        run: |
+          ACTUAL=$(git rev-parse HEAD)
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "::error::master a bougé ($ACTUAL au lieu de $EXPECTED) : la prochaine release le prendra en compte."
+            exit 1
+          fi
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+
+      # Compilation, tests unitaires (mocks), règles ArchUnit (architecture hexagonale),
+      # validation CDI au build Quarkus et rapport de couverture JaCoCo.
+      - name: Maven verify
+        run: ./mvnw -B -ntp verify
+
+      - name: Docker JVM image smoke build
+        run: docker build -f src/main/docker/Dockerfile.jvm -t krabotnotif:verify .
+
+      - name: Upload test & coverage reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: reports-${{ github.run_attempt }}-${{ github.job }}
+          path: |
+            target/surefire-reports/
+            target/site/jacoco/
+          if-no-files-found: ignore
+          retention-days: 14

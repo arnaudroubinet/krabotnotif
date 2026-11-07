@@ -218,17 +218,32 @@ Le projet suit [SemVer](https://semver.org/lang/fr/) : `MAJEUR.MINEUR.CORRECTIF`
 - **MINEUR** : nouvelles fonctionnalités rétrocompatibles
 - **CORRECTIF** : corrections rétrocompatibles
 
-### Créer une release
+## CI/CD
 
-1. Aller dans **Actions** sur GitHub
-2. Sélectionner **Increment Version, Tag and Release**
-3. Cliquer sur **Run workflow**
-4. Choisir le type (`major`, `minor`, `patch`)
+Tout est automatisé : l'application se met à jour et se publie seule tant que les vérifications passent.
 
-Le workflow :
-- Incrémente la version et met à jour `pom.xml`
-- Crée le tag `vX.Y.Z`
-- Build les images Docker multi-architecture
-- Pousse vers DockerHub (`latest` + version)
-- Exécute les scans de sécurité Trivy
-- Crée la release GitHub
+| Workflow | Déclencheur | Rôle |
+|----------|-------------|------|
+| `verify.yml` | réutilisable | Build, tests unitaires (mocks), règles ArchUnit (architecture hexagonale), validation CDI Quarkus, couverture JaCoCo, build de l'image JVM |
+| `ci.yml` | PR, push sur `master` | Lance `verify` ; fusionne automatiquement les PR Dependabot (hors montée majeure) si tout est vert |
+| `auto-update.yml` | samedi 12h UTC | `quarkus:update` + OpenRewrite → `verify` → merge → release. En cas d'échec, la PR reste ouverte avec un commentaire |
+| `release.yml` | tous les jours 5h17 UTC, après chaque auto-update, ou manuel | Publie une release si des changements applicatifs ont été fusionnés depuis le dernier tag |
+| `trivy.yml` | samedi | Scan de sécurité des images `latest` et `latest-native` |
+
+### Release
+
+La release ne publie rien tant que `verify` n'est pas vert, puis :
+
+1. calcule la version à partir du dernier tag `vX.Y.Z` et des [Conventional Commits](https://www.conventionalcommits.org/fr/) :
+   `feat:` → mineure, `type!:` / `BREAKING CHANGE` → majeure, sinon correctif ;
+2. build l'image JVM (amd64 + arm64) et l'image native (compilée sur un runner de chaque architecture) ;
+3. crée le tag git, met à jour `latest` / `latest-native` sur DockerHub ;
+4. crée la release GitHub (utilisée par l'application pour notifier les nouvelles versions) ;
+5. lance les scans Trivy.
+
+Les changements limités à `.github/` ou à la documentation ne déclenchent pas de release.
+La version n'est plus commitée dans `pom.xml` : elle est injectée au build (`-Drevision=X.Y.Z`).
+
+Pour forcer une release : **Actions** → **Release** → **Run workflow** (choix `auto`/`patch`/`minor`/`major`, option `force`).
+
+Secrets requis : `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`.

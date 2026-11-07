@@ -1,8 +1,9 @@
 package arn.roub.krabot.infrastructure.adapter.in.scheduler;
 
-import arn.roub.krabot.application.service.NotificationOrchestrator;
+import arn.roub.krabot.domain.port.in.ReportErrorUseCase;
 import arn.roub.krabot.domain.port.in.CheckKramailsUseCase;
-import arn.roub.krabot.domain.port.in.DelayKramailCheckUseCase;
+import arn.roub.krabot.domain.port.out.KramailCheckTimerPort;
+import io.quarkus.runtime.Startup;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -19,16 +20,20 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Timer pour la vérification périodique des kramails.
- * Permet de décaler dynamiquement la prochaine exécution.
+ * <p>
+ * Adapter entrant (déclenche {@link CheckKramailsUseCase}) et sortant (implémente
+ * {@link KramailCheckTimerPort} pour permettre au domaine de décaler la prochaine exécution).
+ * Démarré au lancement de l'application ({@link Startup}).
  */
+@Startup
 @ApplicationScoped
-public class KramailCheckScheduler implements DelayKramailCheckUseCase {
+public class KramailCheckScheduler implements KramailCheckTimerPort {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(KramailCheckScheduler.class);
 
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
     private final CheckKramailsUseCase checkKramailsUseCase;
-    private final NotificationOrchestrator notificationOrchestrator;
+    private final ReportErrorUseCase reportErrorUseCase;
     private final Duration interval;
     private final Duration delayAmount;
 
@@ -38,12 +43,12 @@ public class KramailCheckScheduler implements DelayKramailCheckUseCase {
 
     public KramailCheckScheduler(
             CheckKramailsUseCase checkKramailsUseCase,
-            NotificationOrchestrator notificationOrchestrator,
+            ReportErrorUseCase reportErrorUseCase,
             @ConfigProperty(name = "scheduler.kraland.scraping.every") Duration interval,
             @ConfigProperty(name = "scheduler.kraland.scraping.delay") Duration delayAmount
     ) {
         this.checkKramailsUseCase = checkKramailsUseCase;
-        this.notificationOrchestrator = notificationOrchestrator;
+        this.reportErrorUseCase = reportErrorUseCase;
         this.interval = interval;
         this.delayAmount = delayAmount;
     }
@@ -73,7 +78,7 @@ public class KramailCheckScheduler implements DelayKramailCheckUseCase {
             checkKramailsUseCase.execute();
         } catch (RuntimeException e) {
             LOGGER.error("Error during kramail check: {}", e.getMessage());
-            notificationOrchestrator.notifyError(e);
+            reportErrorUseCase.notifyError(e);
         }
         rescheduleIfCurrent(generation);
     }
@@ -87,7 +92,7 @@ public class KramailCheckScheduler implements DelayKramailCheckUseCase {
     }
 
     @Override
-    public synchronized Instant delay() {
+    public synchronized Instant postponeIfImminent() {
         if (currentTask != null && !currentTask.isDone()) {
             long remainingMs = currentTask.getDelay(TimeUnit.MILLISECONDS);
 

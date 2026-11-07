@@ -1,108 +1,125 @@
+# Mise à jour automatique de la plateforme Quarkus (quarkus:update + recettes OpenRewrite).
+# update → vérification (tests + architecture) dans le même job → merge → release.
+# Si la vérification échoue, la PR reste ouverte pour une intervention manuelle.
+# Les autres dépendances sont mises à jour par Dependabot (voir ci.yml pour l'auto-merge).
 name: Auto Update
 
 on:
   schedule:
-    - cron: "0 12 * * 6" # Tous les samedis à midi
-  workflow_dispatch: # Permet de lancer manuellement
+    - cron: "0 12 * * 6" # tous les samedis à midi (UTC)
+  workflow_dispatch:
+
+concurrency:
+  group: auto-update
+  cancel-in-progress: false
 
 permissions:
-  contents: write
-  pull-requests: write
-  issues: write
+  contents: read
+
+env:
+  BRANCH: auto-update/quarkus
 
 jobs:
-  auto-update:
+  update:
+    name: Quarkus update & verify
     runs-on: ubuntu-latest
-
+    timeout-minutes: 45
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      verified: ${{ steps.verify.outcome == 'success' && steps.pr.outputs.number != '' }}
+      sha: ${{ steps.commit.outputs.sha }}
+      pr: ${{ steps.pr.outputs.number }}
     steps:
-      - name: Checkout master branch
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
         with:
           ref: master
+          fetch-depth: 0 # git-commit-id-maven-plugin (git describe)
 
-      - name: Set up Java
-        uses: actions/setup-java@v5
+      - uses: actions/setup-java@v5
         with:
-          distribution: 'temurin'
-          java-version: '25'
-      - name : Set executable permissions for maven
-        run: chmod +x ./mvnw
+          distribution: temurin
+          java-version: "25"
+          cache: maven
 
       - name: Update Quarkus
-        run: ./mvnw quarkus:update -Drewrite=true
+        run: ./mvnw -B -ntp quarkus:update -Drewrite=true
 
-      - name: Check for changes
+      - name: Commit changes
+        id: commit
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          if [ -n "$(git status --porcelain)" ]; then
-            echo "changes_detected=true" >> $GITHUB_ENV
-            echo "Changes detected. Proceeding to build and test."
-          else
-            echo "changes_detected=false" >> $GITHUB_ENV
-            echo "No changes detected. Exiting."
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "Quarkus est déjà à jour."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$BRANCH"
+          git add -A
+          git commit -m "deps: update Quarkus platform (quarkus:update + OpenRewrite)"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          git show --stat HEAD
 
-      - name: Build the application
-        if: env.changes_detected == 'true'
-        run: ./mvnw clean install
-
-      - name: Run tests
-        if: env.changes_detected == 'true'
-        run: ./mvnw test
-
-      - name: Create a new branch and commit changes
-        if: env.changes_detected == 'true'
+      # Mêmes vérifications que verify.yml, exécutées sur le code généré dans ce job
+      # (aucune ref externe n'est checkoutée).
+      - name: Verify (build, tests, architecture)
+        id: verify
+        if: steps.commit.outputs.changed == 'true'
+        continue-on-error: true
         run: |
-          BRANCH_NAME="auto-update-$(date +'%Y%m%d%H%M%S')"
-          echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
-          git checkout -b "$BRANCH_NAME"
-          git add .
-          git commit -m "Auto-update: Quarkus and OpenRewrite changes"
-          git push origin "$BRANCH_NAME"
+          ./mvnw -B -ntp verify
+          docker build -f src/main/docker/Dockerfile.jvm -t krabotnotif:verify .
 
-      - name: Create a pull request
-        if: env.changes_detected == 'true'
-        uses: actions/github-script@v9
-        with:
-          script: |
-            const branchName = process.env.BRANCH_NAME;
-            if (!branchName) {
-              throw new Error('Branch name is missing.');
-            }
+      - name: Push branch and open or reuse pull request
+        id: pr
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git push --force origin "$BRANCH"
+          NUMBER=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty')
+          if [ -z "$NUMBER" ]; then
+            URL=$(gh pr create --base master --head "$BRANCH" \
+              --title "deps: update Quarkus platform" \
+              --body "Mise à jour automatique (\`quarkus:update\` + OpenRewrite). Fusionnée automatiquement si la vérification passe." \
+              --label dependencies --label automated-pr)
+            NUMBER=${URL##*/}
+          fi
+          echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
 
-            const { data: pullRequest } = await github.rest.pulls.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: "Auto-update: Quarkus and OpenRewrite changes",
-              head: branchName,
-              base: "master",
-              body: "This PR includes automated updates for Quarkus and OpenRewrite changes.\n\nAutomatic updates triggered by scheduled workflow."
-            });
-            
-            await github.rest.issues.addLabels({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: pullRequest.number,
-              labels: ['automated-pr', 'dependencies']
-            });
-            
-            core.exportVariable('PR_ID', pullRequest.number);
+      - name: Report verification failure
+        if: steps.commit.outputs.changed == 'true' && steps.verify.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr comment "${{ steps.pr.outputs.number }}" \
+            --body "❌ La vérification a échoué ([run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})) : intervention manuelle nécessaire."
+          exit 1
 
-      - name: Merge the pull request
-        if: env.changes_detected == 'true'
-        uses: actions/github-script@v9
-        with:
-          script: |
-            const prNumber = process.env.PR_ID;
-            if (!prNumber) {
-              throw new Error('Pull request number is missing.');
-            }
+  merge:
+    name: Merge
+    needs: update
+    if: needs.update.outputs.verified == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Squash merge
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr merge "${{ needs.update.outputs.pr }}" --repo "${{ github.repository }}" \
+            --squash --delete-branch --match-head-commit "${{ needs.update.outputs.sha }}"
 
-            await github.rest.pulls.merge({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: parseInt(prNumber, 10),
-              merge_method: "squash"
-            });
+  release:
+    needs: merge
+    uses: ./.github/workflows/release.yml
+    permissions:
+      contents: write
+      security-events: write
+      actions: read
+    secrets: inherit

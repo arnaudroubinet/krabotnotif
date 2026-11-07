@@ -1,6 +1,6 @@
 package arn.roub.krabot.infrastructure.adapter.in.scheduler;
 
-import arn.roub.krabot.application.service.NotificationOrchestrator;
+import arn.roub.krabot.domain.port.in.ReportErrorUseCase;
 import arn.roub.krabot.domain.port.in.CheckSleepUseCase;
 import io.quarkus.runtime.Startup;
 import jakarta.annotation.PostConstruct;
@@ -31,18 +31,18 @@ public class SleepCheckScheduler {
 
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
     private final CheckSleepUseCase checkSleepUseCase;
-    private final NotificationOrchestrator notificationOrchestrator;
+    private final ReportErrorUseCase reportErrorUseCase;
     private final LocalTime scheduledTime;
 
     private long scheduleGeneration = 0;
 
     public SleepCheckScheduler(
             CheckSleepUseCase checkSleepUseCase,
-            NotificationOrchestrator notificationOrchestrator,
+            ReportErrorUseCase reportErrorUseCase,
             @ConfigProperty(name = "scheduler.sleep.time", defaultValue = "23:55") String scheduledTimeStr
     ) {
         this.checkSleepUseCase = checkSleepUseCase;
-        this.notificationOrchestrator = notificationOrchestrator;
+        this.reportErrorUseCase = reportErrorUseCase;
         this.scheduledTime = LocalTime.parse(scheduledTimeStr);
     }
 
@@ -87,7 +87,7 @@ public class SleepCheckScheduler {
             checkSleepUseCase.execute();
         } catch (RuntimeException e) {
             LOGGER.error("Error during sleep check: {}", e.getMessage());
-            notificationOrchestrator.notifyError(e);
+            reportErrorUseCase.notifyError(e);
         }
         rescheduleIfCurrent(generation);
     }
