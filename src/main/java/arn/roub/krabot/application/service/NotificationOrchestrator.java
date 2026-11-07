@@ -1,6 +1,8 @@
 package arn.roub.krabot.application.service;
 
 import arn.roub.krabot.domain.model.ReleaseVersion;
+import arn.roub.krabot.domain.port.in.ApplicationLifecycleUseCase;
+import arn.roub.krabot.domain.port.in.ReportErrorUseCase;
 import arn.roub.krabot.domain.port.out.GithubReleasePort;
 import arn.roub.krabot.domain.port.out.NotificationPort;
 import arn.roub.krabot.domain.port.out.StateRepositoryPort;
@@ -10,7 +12,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Orchestrateur pour les opérations de notification lifecycle (startup/shutdown).
  */
-public class NotificationOrchestrator {
+public class NotificationOrchestrator implements ApplicationLifecycleUseCase, ReportErrorUseCase {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(NotificationOrchestrator.class);
 
@@ -31,6 +33,7 @@ public class NotificationOrchestrator {
     /**
      * Initialise l'application : récupère la dernière version et envoie la notification de démarrage.
      */
+    @Override
     public void initialize() {
         try {
             ReleaseVersion latestVersion = githubReleasePort.getLatestRelease();
@@ -45,6 +48,7 @@ public class NotificationOrchestrator {
     /**
      * Termine l'application : envoie la notification d'arrêt.
      */
+    @Override
     public void shutdown() {
         try {
             notificationPort.sendShutdownNotification();
@@ -58,6 +62,7 @@ public class NotificationOrchestrator {
      *
      * @param error l'exception à notifier
      */
+    @Override
     public void notifyError(Exception error) {
         try {
             String message = error.getMessage() != null ? error.getMessage() : error.getClass().getSimpleName();

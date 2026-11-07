@@ -40,7 +40,7 @@ public class KralandScrapingAdapter implements KralandScrapingPort {
     private final KralandHtmlParser parser;
 
     public KralandScrapingAdapter() {
-        this.httpClient = HttpClient.newBuilder()
+        this(HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(30))
                 .cookieHandler(new CookieManager())
                 .followRedirects(HttpClient.Redirect.ALWAYS)
@@ -48,8 +48,15 @@ public class KralandScrapingAdapter implements KralandScrapingPort {
                 .proxy(ProxySelector.getDefault())
                 .version(HttpClient.Version.HTTP_2)
                 .executor(Executors.newVirtualThreadPerTaskExecutor())
-                .build();
-        this.parser = new KralandHtmlParser();
+                .build(), new KralandHtmlParser());
+    }
+
+    /**
+     * Constructeur permettant d'injecter le client HTTP et le parser (tests).
+     */
+    KralandScrapingAdapter(HttpClient httpClient, KralandHtmlParser parser) {
+        this.httpClient = httpClient;
+        this.parser = parser;
     }
 
     @Override
