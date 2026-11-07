@@ -4,9 +4,11 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>arn.roub.krabot</groupId>
     <artifactId>krabotnotif</artifactId>
-    <version>3.5.1</version>
+    <!-- La version est calculée et injectée par la CI au moment de la release (-Drevision=X.Y.Z). -->
+    <version>${revision}</version>
 
     <properties>
+        <revision>0.0.0-SNAPSHOT</revision>
         <compiler-plugin.version>3.15.0</compiler-plugin.version>
         <maven.compiler.release>25</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -16,6 +18,7 @@
         <quarkus.platform.version>3.40.1.1</quarkus.platform.version>
         <skipITs>true</skipITs>
         <surefire-plugin.version>3.5.6</surefire-plugin.version>
+        <jacoco-plugin.version>0.8.14</jacoco-plugin.version>
     </properties>
 
     <dependencyManagement>
@@ -174,6 +177,26 @@
                     </systemPropertyVariables>
                     <argLine>@{argLine}</argLine>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <artifactId>maven-failsafe-plugin</artifactId>

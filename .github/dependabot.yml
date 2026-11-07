@@ -1,24 +1,33 @@
-# To get started with Dependabot version updates, you'll need to specify which
-# package ecosystems to update and where the package manifests are located.
-# Please see the documentation for all configuration options:
-# https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
-
+# Les PR Dependabot (hors montée majeure) sont fusionnées automatiquement par ci.yml
+# une fois la vérification passée, puis publiées par la release quotidienne.
 version: 2
 updates:
   - package-ecosystem: "maven"
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "monday"
     commit-message:
       prefix: "deps"
     labels:
       - "dependencies"
+    ignore:
+      # La plateforme Quarkus est mise à jour par auto-update.yml (quarkus:update + OpenRewrite).
+      - dependency-name: "io.quarkus.platform:*"
+    groups:
+      maven-minor-and-patch:
+        update-types: ["minor", "patch"]
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "monday"
     commit-message:
       prefix: "chore"
     labels:
       - "dependencies"
       - "github-actions"
+    groups:
+      github-actions:
+        patterns: ["*"]

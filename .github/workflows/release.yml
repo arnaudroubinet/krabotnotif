@@ -1,110 +1,275 @@
+# Release automatique :
+#   - tous les jours, si des changements applicatifs ont été fusionnés depuis le dernier tag ;
+#   - à la fin de chaque Auto Update fusionnée ;
+#   - à la demande (workflow_dispatch).
+# Rien n'est publié tant que la vérification complète (tests + architecture) n'est pas verte.
+# La version est calculée à partir des tags et des Conventional Commits, puis injectée au build
+# (-Drevision) : aucun commit de bump n'est poussé sur master.
 name: Release
+
 on:
-  push:
-    tags:
-      - 'v*'
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Incrément de version (auto = déduit des Conventional Commits)"
+        type: choice
+        options: [auto, patch, minor, major]
+        default: auto
+      force:
+        description: "Publier même sans changement applicatif depuis le dernier tag"
+        type: boolean
+        default: false
+  workflow_call:
+    inputs:
+      bump:
+        type: string
+        default: auto
+      force:
+        type: boolean
+        default: false
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 permissions:
-  contents: write
-  security-events: write
-  actions: read
+  contents: read
+
+env:
+  IMAGE: arnaudroubinet/krabotnotif
+
 jobs:
-  build:
+  prepare:
+    name: Plan release
     runs-on: ubuntu-latest
+    outputs:
+      release: ${{ steps.plan.outputs.release }}
+      version: ${{ steps.plan.outputs.version }}
+      tag: ${{ steps.plan.outputs.tag }}
+      sha: ${{ steps.plan.outputs.sha }}
     steps:
-      - name: Checkout
+      - name: Checkout master
         uses: actions/checkout@v7
-
-      - name: Set up JDK 25
-        uses: actions/setup-java@v5
         with:
-          distribution: 'temurin'
-          java-version: '25'
+          ref: master
+          fetch-depth: 0
 
-      - name: Set executable permissions for maven
-        run: chmod +x ./mvnw
+      - name: Compute next version
+        id: plan
+        env:
+          BUMP: ${{ inputs.bump || 'auto' }}
+          FORCE: ${{ inputs.force || false }}
+        run: |
+          set -euo pipefail
+          SHA=$(git rev-parse HEAD)
+          LATEST=$(git tag -l 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n1 || true)
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
+          if [ -z "$LATEST" ]; then
+            LATEST="v0.0.0"; RANGE="HEAD"; CHANGED="(initial release)"
+          else
+            RANGE="$LATEST..HEAD"
+            # Seuls les changements qui impactent l'application livrée déclenchent une release.
+            CHANGED=$(git diff --name-only "$LATEST" HEAD -- . \
+              ':!.github' ':!*.md' ':!.serena' ':!.playwright-mcp' ':!.claude' ':!.gitignore')
+          fi
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+          if [ -z "$CHANGED" ] && [ "$FORCE" != "true" ]; then
+            echo "Aucun changement applicatif depuis $LATEST : pas de release."
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            echo "### ⏭️ Pas de release : aucun changement applicatif depuis \`$LATEST\`" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
 
-      - name: Login to DockerHub
-        uses: docker/login-action@v4
+          if [ "$BUMP" = "auto" ]; then
+            MESSAGES=$(git log --format='%s%n%b' "$RANGE")
+            if grep -qE '^[a-z]+(\([^)]*\))?!:|^BREAKING[ -]CHANGE' <<<"$MESSAGES"; then BUMP=major
+            elif grep -qE '^feat(\([^)]*\))?:' <<<"$MESSAGES"; then BUMP=minor
+            else BUMP=patch
+            fi
+          fi
+
+          IFS='.' read -r MAJOR MINOR PATCH <<<"${LATEST#v}"
+          case "$BUMP" in
+            major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+            minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+            patch) PATCH=$((PATCH + 1)) ;;
+            *) echo "::error::bump invalide : $BUMP"; exit 1 ;;
+          esac
+          VERSION="$MAJOR.$MINOR.$PATCH"
+
+          if git rev-parse -q --verify "refs/tags/v$VERSION" >/dev/null; then
+            echo "::error::Le tag v$VERSION existe déjà"; exit 1
+          fi
+
+          {
+            echo "release=true"
+            echo "version=$VERSION"
+            echo "tag=v$VERSION"
+            echo "sha=$SHA"
+          } >> "$GITHUB_OUTPUT"
+          {
+            echo "### 🚀 Release planifiée : \`$LATEST\` → \`v$VERSION\` ($BUMP)"
+            echo "Commit : \`$SHA\`"
+            echo '```'
+            git log --oneline "$RANGE" | head -50
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  verify:
+    needs: prepare
+    if: needs.prepare.outputs.release == 'true'
+    uses: ./.github/workflows/verify.yml
+    with:
+      ref: ${{ needs.prepare.outputs.sha }}
+
+  jvm-image:
+    name: JVM image (amd64 + arm64)
+    needs: [prepare, verify]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+
+      - name: Package
+        run: ./mvnw -B -ntp package -DskipTests -Drevision=${{ needs.prepare.outputs.version }}
+
+      - uses: docker/setup-qemu-action@v4
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Execute maven install
-        run: ./mvnw clean install
-
-      - name: Build native application
-        run: ./mvnw package -Pnative
-
-      - name: Build and push multi-arch Docker images
+      - name: Build & push
         run: |
-          docker buildx create --name multiarch --use || true
-          
-          # Build and push JVM image
           docker buildx build --platform linux/amd64,linux/arm64 \
             -f src/main/docker/Dockerfile.jvm \
-            -t arnaudroubinet/krabotnotif:latest \
-            -t arnaudroubinet/krabotnotif:${GITHUB_REF#refs/tags/} \
+            -t "$IMAGE:${{ needs.prepare.outputs.tag }}" \
             --push .
 
-          # Build and push native image
-          docker buildx build --platform linux/amd64,linux/arm64 \
-            -f src/main/docker/Dockerfile.native \
-            -t arnaudroubinet/krabotnotif:latest-native \
-            -t arnaudroubinet/krabotnotif:${GITHUB_REF#refs/tags/}-native \
-            --push .
-
-      - name: Run Trivy vulnerability scanner for JVM image
-        uses: aquasecurity/trivy-action@v0.36.0
-        continue-on-error: true
+  # Le binaire natif est spécifique à l'architecture : il est compilé sur un runner de chaque architecture.
+  native-image:
+    name: Native image (${{ matrix.arch }})
+    needs: [prepare, verify]
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
         with:
-          image-ref: 'arnaudroubinet/krabotnotif:${GITHUB_REF#refs/tags/}'
-          format: 'sarif'
-          output: 'trivy-results-jvm.sarif'
-          severity: 'CRITICAL,HIGH'
-          limit-severities-for-sarif: true
+          ref: ${{ needs.prepare.outputs.sha }}
+          fetch-depth: 0
 
-      - name: Run Trivy vulnerability scanner for native image
-        uses: aquasecurity/trivy-action@v0.36.0
-        continue-on-error: true
+      - uses: actions/setup-java@v5
         with:
-          image-ref: 'arnaudroubinet/krabotnotif:${GITHUB_REF#refs/tags/}-native'
-          format: 'sarif'
-          output: 'trivy-results-native.sarif'
-          severity: 'CRITICAL,HIGH'
-          limit-severities-for-sarif: true
+          distribution: temurin
+          java-version: "25"
+          cache: maven
 
-      - name: Upload Trivy JVM scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v4
-        if: always() && hashFiles('trivy-results-jvm.sarif') != ''
-        with:
-          sarif_file: 'trivy-results-jvm.sarif'
-          category: jvm-image
-
-      - name: Upload Trivy native scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v4
-        if: always() && hashFiles('trivy-results-native.sarif') != ''
-        with:
-          sarif_file: 'trivy-results-native.sarif'
-          category: native-image
-
-      - name: Create GitHub Release
+      - name: Native build
+        run: ./mvnw -B -ntp package -Pnative -DskipTests -Drevision=${{ needs.prepare.outputs.version }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          TAG_NAME="${GITHUB_REF#refs/tags/}"
+          QUARKUS_NATIVE_ENABLE_HTTPS_URL_HANDLER: true
 
-          # Check if release already exists
-          if gh release view "$TAG_NAME" &>/dev/null; then
-            echo "Release $TAG_NAME already exists, skipping creation"
-          else
-            echo "Creating release $TAG_NAME"
-            gh release create "$TAG_NAME" \
-              --title "Release $TAG_NAME" \
-              --generate-notes
-          fi
+      - uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build & push
+        run: |
+          REF="$IMAGE:${{ needs.prepare.outputs.tag }}-native-${{ matrix.arch }}"
+          docker build -f src/main/docker/Dockerfile.native -t "$REF" .
+          docker push "$REF"
+
+  publish:
+    name: Tag & publish
+    needs: [prepare, jvm-image, native-image]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ needs.prepare.outputs.tag }}
+      SHA: ${{ needs.prepare.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Native multi-arch manifest
+        run: |
+          docker buildx imagetools create -t "$IMAGE:$TAG-native" \
+            "$IMAGE:$TAG-native-amd64" "$IMAGE:$TAG-native-arm64"
+
+      - name: Create git tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "Release $TAG" "$SHA"
+          git push origin "refs/tags/$TAG"
+
+      - name: Promote latest images
+        run: |
+          docker buildx imagetools create -t "$IMAGE:latest" "$IMAGE:$TAG"
+          docker buildx imagetools create -t "$IMAGE:latest-native" "$IMAGE:$TAG-native"
+
+      # Créée en dernier : l'application notifie les utilisateurs à partir de cette release.
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$TAG" --verify-tag --title "Release $TAG" --generate-notes \
+            --notes "Images Docker : \`$IMAGE:$TAG\` (JVM) et \`$IMAGE:$TAG-native\` (natif), amd64 + arm64."
+
+  security-scan:
+    name: Trivy (${{ matrix.variant }})
+    needs: [prepare, publish]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [jvm, native]
+    steps:
+      - name: Scan image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ env.IMAGE }}:${{ needs.prepare.outputs.tag }}${{ matrix.variant == 'native' && '-native' || '' }}
+          format: sarif
+          output: trivy-${{ matrix.variant }}.sarif
+          severity: CRITICAL,HIGH
+          limit-severities-for-sarif: true
+
+      - name: Upload to GitHub Security
+        if: always() && hashFiles(format('trivy-{0}.sarif', matrix.variant)) != ''
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-${{ matrix.variant }}.sarif
+          category: ${{ matrix.variant }}-image
