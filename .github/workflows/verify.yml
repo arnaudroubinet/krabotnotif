@@ -31,7 +31,9 @@ jobs:
         with:
           distribution: temurin
           java-version: "25"
-          cache: maven
+          # Pas de cache Maven ici : ce workflow vérifie aussi des refs passées en entrée depuis
+          # des contextes privilégiés (schedule / workflow_dispatch). Un cache écrit pendant
+          # ces exécutions pourrait être restauré sur la branche par défaut (cache poisoning).
 
       # Compilation, tests unitaires (mocks), règles ArchUnit (architecture hexagonale),
       # validation CDI au build Quarkus et rapport de couverture JaCoCo.
