@@ -17,31 +17,3 @@ jobs:
   verify:
     uses: ./.github/workflows/verify.yml
 
-  # Les PR Dependabot (hors montée de version majeure) sont fusionnées dès que la vérification passe.
-  # La release quotidienne publiera ensuite automatiquement une nouvelle version.
-  dependabot-auto-merge:
-    name: Dependabot auto-merge
-    needs: verify
-    if: github.event_name == 'pull_request' && github.event.pull_request.user.login == 'dependabot[bot]' && github.actor == 'dependabot[bot]'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-    steps:
-      - name: Fetch Dependabot metadata
-        id: meta
-        uses: dependabot/fetch-metadata@v3
-
-      - name: Merge
-        if: steps.meta.outputs.update-type != 'version-update:semver-major'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_URL: ${{ github.event.pull_request.html_url }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: gh pr merge "$PR_URL" --squash --delete-branch --match-head-commit "$HEAD_SHA"
-
-      - name: Major update left for manual review
-        if: steps.meta.outputs.update-type == 'version-update:semver-major'
-        env:
-          DEPS: ${{ steps.meta.outputs.dependency-names }}
-        run: echo "::notice::Montée de version majeure ($DEPS), revue manuelle requise."

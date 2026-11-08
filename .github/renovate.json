@@ -1,0 +1,73 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Mises à jour automatiques : les PR mineures/correctifs/digests sont fusionnées par Renovate dès que la CI est verte, puis publiées par la release quotidienne (release.yml). Les montées majeures attendent une validation dans le Dependency Dashboard.",
+  "extends": [
+    "config:recommended",
+    ":semanticCommits",
+    "docker:pinDigests",
+    "helpers:pinGitHubActionDigestsToSemver"
+  ],
+  "timezone": "Europe/Paris",
+  "schedule": ["* 0-6 * * 1"],
+  "labels": ["dependencies"],
+  "dependencyDashboard": true,
+  "osvVulnerabilityAlerts": true,
+  "vulnerabilityAlerts": {
+    "labels": ["dependencies", "security"],
+    "automerge": true,
+    "schedule": ["at any time"]
+  },
+  "platformAutomerge": false,
+  "major": {
+    "dependencyDashboardApproval": true
+  },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Image de build natif Quarkus/Mandrel (quarkus.native.builder-image)",
+      "managerFilePatterns": ["/^src/main/resources/application\\.properties$/"],
+      "matchStrings": [
+        "quarkus\\.native\\.builder-image=(?<depName>[^:\\s]+):(?<currentValue>[^@\\s]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?"
+      ],
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "regex:^jdk-(?<major>\\d+)$",
+      "autoReplaceStringTemplate": "quarkus.native.builder-image={{{depName}}}:{{{newValue}}}{{#if newDigest}}@{{{newDigest}}}{{/if}}"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Mineures, correctifs et digests : fusion automatique une fois la CI verte",
+      "matchUpdateTypes": ["minor", "patch", "pin", "pinDigest", "digest"],
+      "automerge": true
+    },
+    {
+      "description": "Délai de stabilisation avant de proposer une nouvelle version (protection supply chain)",
+      "matchDatasources": ["maven", "github-tags", "github-releases"],
+      "minimumReleaseAge": "3 days"
+    },
+    {
+      "description": "La plateforme Quarkus est mise à jour par auto-update.yml (quarkus:update + recettes de migration OpenRewrite)",
+      "matchPackageNames": ["io.quarkus.platform:**"],
+      "enabled": false
+    },
+    {
+      "description": "Une seule PR pour les mises à jour Maven non majeures (dépendances, plugins, wrapper)",
+      "matchManagers": ["maven", "maven-wrapper"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "maven non-major"
+    },
+    {
+      "description": "Une seule PR pour les GitHub Actions non majeures",
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["minor", "patch", "pin", "pinDigest", "digest"],
+      "groupName": "github-actions non-major",
+      "addLabels": ["github-actions"]
+    },
+    {
+      "description": "Une seule PR pour les images Docker (images de base et image de build natif) : chaque correctif de sécurité de l'image de base déclenche une nouvelle release",
+      "matchDatasources": ["docker"],
+      "matchUpdateTypes": ["pin", "pinDigest", "digest", "minor", "patch"],
+      "groupName": "docker images"
+    }
+  ]
+}

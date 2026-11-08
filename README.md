@@ -225,10 +225,20 @@ Tout est automatisé : l'application se met à jour et se publie seule tant que 
 | Workflow | Déclencheur | Rôle |
 |----------|-------------|------|
 | `verify.yml` | réutilisable | Build, tests unitaires (mocks), règles ArchUnit (architecture hexagonale), validation CDI Quarkus, couverture JaCoCo, build de l'image JVM |
-| `ci.yml` | PR, push sur `master` | Lance `verify` ; fusionne automatiquement les PR Dependabot (hors montée majeure) si tout est vert |
+| `ci.yml` | PR, push sur `master` | Lance `verify` (Renovate fusionne ses PR quand ce check est vert) |
 | `auto-update.yml` | samedi 12h UTC | `quarkus:update` + OpenRewrite → `verify` → merge → release. En cas d'échec, la PR reste ouverte avec un commentaire |
 | `release.yml` | tous les jours 5h17 UTC, après chaque auto-update, ou manuel | Publie une release si des changements applicatifs ont été fusionnés depuis le dernier tag |
 | `trivy.yml` | samedi | Scan de sécurité des images `latest` et `latest-native` |
+
+### Mises à jour des dépendances (Renovate)
+
+[Renovate](https://docs.renovatebot.com/) est configuré dans [`.github/renovate.json`](.github/renovate.json) (le lundi matin, heure de Paris) pour :
+
+- les dépendances et plugins Maven, et le Maven Wrapper ;
+- les GitHub Actions (épinglées par SHA) ;
+- les images de base des Dockerfiles et l'image de build natif Mandrel (épinglées par digest : chaque correctif de l'image de base produit une PR, donc une release).
+
+Les mises à jour mineures, correctifs, digests et failles de sécurité sont fusionnées automatiquement dès que la CI est verte, puis publiées par la release quotidienne. Les montées majeures attendent une validation dans l'issue *Dependency Dashboard*. La plateforme Quarkus reste gérée par `auto-update.yml`, qui applique aussi les recettes de migration OpenRewrite.
 
 ### Release
 
