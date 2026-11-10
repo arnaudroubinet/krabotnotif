@@ -37,7 +37,7 @@ jobs:
           ref: master
           fetch-depth: 0 # git-commit-id-maven-plugin (git describe)
 
-      - uses: actions/setup-java@v5
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "25"
